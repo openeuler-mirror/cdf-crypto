@@ -21,9 +21,9 @@ yum install -y cmake
 yum install -y gcc
 yum install -y gcc-c++
 ```
++ Automatic dependency download is enabled by default. To download dependencies manually, set `enable_download_dependency` in the build.sh file to 'Off'.
 + Manual Dependency Download
 ```
-# Automatic dependency download is enabled by default. To download dependencies manually, set `enable_download_dependency` in the build.sh file to 'Off'.
 mkdir -p external
 # rapidjson
 git clone https://szv-open.codehub.huawei.com/OpenSourceCenter/Tencent/rapidjson.git rapidjson -b 6089180ecb704cb2b136777798fa1be303618975 --depth=1

@@ -21,9 +21,9 @@ yum install -y cmake
 yum install -y gcc
 yum install -y gcc-c++
 ```
-+ 依赖手动下载
++ 默认自动下载其他依赖，如需手动下载依赖，将 build.sh 文件中的 enable_download_dependency 设置为'Off'
++ 手动下载依赖
 ```
-# 默认自动下载依赖，如需手动下载依赖，将 build.sh 文件中的 enable_download_dependency 设置为'Off'
 mkdir -p external
 # rapidjson
 git clone https://szv-open.codehub.huawei.com/OpenSourceCenter/Tencent/rapidjson.git rapidjson -b 6089180ecb704cb2b136777798fa1be303618975 --depth=1
