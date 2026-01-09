@@ -20,10 +20,19 @@ yum install -y make
 yum install -y cmake
 yum install -y gcc
 yum install -y gcc-c++
-yum install -y libboundscheck
-yum install -y rapidjson-devel
-yum install -y openssl-devel
-yum install -y krb5-libs krb5-devel
+```
++ Manual Dependency Download
+```
+# Automatic dependency download is enabled by default. To download dependencies manually, set `enable_download_dependency` in the build.sh file to 'Off'.
+mkdir -p external
+# rapidjson
+git clone https://szv-open.codehub.huawei.com/OpenSourceCenter/Tencent/rapidjson.git rapidjson -b 6089180ecb704cb2b136777798fa1be303618975 --depth=1
+# libboundscheck
+git clone https://szv-open.codehub.huawei.com/OpenSourceCenter/openEuler/libboundscheck.git libboundscheck -b master --depth=1
+# krb5
+git clone https://szv-open.codehub.huawei.com/OpenSourceCenter/krb5/krb5.git krb5 -b 1.21.3-htrunk2 --depth=1
+# openssl
+git clone https://szv-open.codehub.huawei.com/OpenSourceCenter/openssl/openssl.git openssl -b 3.0.9-h16 --depth=1
 ```
 2. Build Instructions
 + Compile directly with the preconfigured script

@@ -20,10 +20,19 @@ yum install -y make
 yum install -y cmake
 yum install -y gcc
 yum install -y gcc-c++
-yum install -y libboundscheck
-yum install -y rapicjson-devel
-yum install -y openssl-devel
-yum install -y krb5-libs krb5-devel
+```
++ 依赖手动下载
+```
+# 默认自动下载依赖，如需手动下载依赖，将 build.sh 文件中的 enable_download_dependency 设置为'Off'
+mkdir -p external
+# rapidjson
+git clone https://szv-open.codehub.huawei.com/OpenSourceCenter/Tencent/rapidjson.git rapidjson -b 6089180ecb704cb2b136777798fa1be303618975 --depth=1
+# libboundscheck
+git clone https://szv-open.codehub.huawei.com/OpenSourceCenter/openEuler/libboundscheck.git libboundscheck -b master --depth=1
+# krb5
+git clone https://szv-open.codehub.huawei.com/OpenSourceCenter/krb5/krb5.git krb5 -b 1.21.3-htrunk2 --depth=1
+# openssl
+git clone https://szv-open.codehub.huawei.com/OpenSourceCenter/openssl/openssl.git openssl -b 3.0.9-h16 --depth=1
 ```
 2. 编译指导
 
