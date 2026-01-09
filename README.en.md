@@ -11,7 +11,7 @@ Software architecture description
 Build And Install
 1. Compilation Environment Requirements
 
-+ Kernel VerSion >= 6.6
++ OpenEuler Kernel VerSion >= 6.6
 + You also need to install the following dependency packages
 
 ```
