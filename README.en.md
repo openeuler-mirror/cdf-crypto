@@ -21,23 +21,11 @@ yum install -y cmake
 yum install -y gcc
 yum install -y gcc-c++
 ```
-+ Automatic dependency download is enabled by default. To download dependencies manually, set `enable_download_dependency` in the build.sh file to 'Off'.
-+ Manual Dependency Download
-```
-mkdir -p external
-# rapidjson
-git clone https://szv-open.codehub.huawei.com/OpenSourceCenter/Tencent/rapidjson.git rapidjson -b 6089180ecb704cb2b136777798fa1be303618975 --depth=1
-# libboundscheck
-git clone https://szv-open.codehub.huawei.com/OpenSourceCenter/openEuler/libboundscheck.git libboundscheck -b master --depth=1
-# krb5
-git clone https://szv-open.codehub.huawei.com/OpenSourceCenter/krb5/krb5.git krb5 -b 1.21.3-htrunk2 --depth=1
-# openssl
-git clone https://szv-open.codehub.huawei.com/OpenSourceCenter/openssl/openssl.git openssl -b 3.0.9-h16 --depth=1
-```
++ Other dependencies are downloaded automatically by default
 2. Build Instructions
 + Compile directly with the preconfigured script
 ```
-sh build.sh cicd_default
+sh build.sh output
 ```
 + RPM package building
 ```
@@ -55,14 +43,6 @@ sh build.sh rpm
 ```
 sudo rpm -ivh --nodes /package/rpm/cdf-crypto-*.rpm
 ```
-#### Function Description
-+ Cli: Provides a binary tool for calling the functions of the key management component.
-+ Authentication: Provides Kerberos and JWT token authentication capabilities.
-+ Authorization: Provides whitelist-based authorization capabilities.
-+ Cryption: Provides OpenSSL-based cryptography algorithm capabilities, including hash, HMAC, encryption and decryption capabilities.
-+ key_management:Provides Openbao and Vault-based key management capabilities.
-+ psk_management: Provides PSK key management capabilities.
-+ rand: Provides secure random number generation capabilities.
 
 #### Contribution
 

@@ -12,8 +12,6 @@
 编译运行
 1. 编译环境要求
 + 编译环境要求：OpenEuler >= kernel 6.6
-+ 同时你需要安装以下依赖包
-
 ```
 yum install -y rpm-build
 yum install -y make
@@ -21,24 +19,12 @@ yum install -y cmake
 yum install -y gcc
 yum install -y gcc-c++
 ```
-+ 默认自动下载其他依赖，如需手动下载依赖，将 build.sh 文件中的 enable_download_dependency 设置为'Off'
-+ 手动下载依赖
-```
-mkdir -p external
-# rapidjson
-git clone https://szv-open.codehub.huawei.com/OpenSourceCenter/Tencent/rapidjson.git rapidjson -b 6089180ecb704cb2b136777798fa1be303618975 --depth=1
-# libboundscheck
-git clone https://szv-open.codehub.huawei.com/OpenSourceCenter/openEuler/libboundscheck.git libboundscheck -b master --depth=1
-# krb5
-git clone https://szv-open.codehub.huawei.com/OpenSourceCenter/krb5/krb5.git krb5 -b 1.21.3-htrunk2 --depth=1
-# openssl
-git clone https://szv-open.codehub.huawei.com/OpenSourceCenter/openssl/openssl.git openssl -b 3.0.9-h16 --depth=1
-```
++ 其他依赖默认自动下载
 2. 编译指导
 
 + 直接通过预制脚本编译
 ```
-sh build.sh cicd_default
+sh build.sh output
 ```
 + rpm包构建
 ```
@@ -55,14 +41,6 @@ sh build.sh rpm
 ```
 sudo rpm -ivh --nodes /package/rpm/cdf-crypto-*.rpm
 ```
-#### 功能说明
-1. 命令行工具Cli：提供调用密钥管理组件功能的二进制工具。
-2. 鉴权模块authentication：提供Kerberos以及JWT token鉴权能力。
-3. 授权模块authorization：提供基于白名单的授权能力。
-4. 密码学算法模块cryption：提供基于openssl的密码学算法能力，包含hash、hmac、加解密能力。
-5. 密钥管理模块key_management：提供基于openbao、vault的密钥管理能力。
-6. psk管理模块psk_management：提供psk密钥管理能力。
-7. 随机数模块rand：提供安全随机数能力。
 
 #### 参与贡献
 
