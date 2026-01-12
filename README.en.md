@@ -8,15 +8,41 @@ Software architecture description
 
 #### Installation
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+Build And Install
+1. Compilation Environment Requirements
 
-#### Instructions
++ OpenEuler Kernel VerSion >= 6.6
++ You also need to install the following dependency packages
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+```
+yum install -y rpm-build
+yum install -y make
+yum install -y cmake
+yum install -y gcc
+yum install -y gcc-c++
+```
++ Other dependencies are downloaded automatically by default
+2. Build Instructions
++ Compile directly with the preconfigured script
+```
+sh build.sh output
+```
++ RPM package building
+```
+sh build.sh rpm
+```
++ Compilation options
+
+```
+--help         # Display help information
+--debug        # Debug mode
+--enable       # Support compiling partial modules, separate modules with spaces
+```
+3. Installation Instructions
++ Install after RPM package building
+```
+sudo rpm -ivh --nodes /package/rpm/cdf-crypto-*.rpm
+```
 
 #### Contribution
 

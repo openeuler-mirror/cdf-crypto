@@ -1,7 +1,7 @@
 # cdf-crypto
 
 #### 介绍
-A lib that provides cryptographic algorithms and key security functions.
+
 
 #### 软件架构
 软件架构说明
@@ -9,15 +9,38 @@ A lib that provides cryptographic algorithms and key security functions.
 
 #### 安装教程
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+编译运行
+1. 编译环境要求
++ 编译环境要求：OpenEuler >= kernel 6.6
+```
+yum install -y rpm-build
+yum install -y make
+yum install -y cmake
+yum install -y gcc
+yum install -y gcc-c++
+```
++ 其他依赖默认自动下载
+2. 编译指导
 
-#### 使用说明
-
-1.  xxxx
-2.  xxxx
-3.  xxxx
++ 直接通过预制脚本编译
+```
+sh build.sh output
+```
++ rpm包构建
+```
+sh build.sh rpm
+```
++ 编译选项
+```
+--help         # 显示帮助信息
+--debug        # debug模式
+--enable       # 支持编译部分模块，用空格分隔模块
+```
+3. 安装指导
++ rpm包构建后进行安装
+```
+sudo rpm -ivh --nodes /package/rpm/cdf-crypto-*.rpm
+```
 
 #### 参与贡献
 
