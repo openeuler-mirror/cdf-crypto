@@ -1,10 +1,10 @@
 # cdf-crypto
 
 #### Description
-A lib that provides cryptographic algorithms and key security functions.
+The full name of CDF is Confidential Data defensive Framework. It provides an SDK library for sensitive data protection, offering security configuration templates such as cryptographic algorithm strength and key security isolation, thereby enhancing the security of sensitive data protection for developers' reference.
 
 #### Software Architecture
-Software architecture description
+![](./docs/images/cdf_introduction.png)
 
 #### Installation
 
