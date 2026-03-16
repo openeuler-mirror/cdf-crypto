@@ -1,0 +1,14 @@
+{
+  "algorithm": "AES256_GCM",
+  "keyManagerType": "openbao",
+  "thirdKeyManager": {
+    "keyManagerPath": "/usr/bin/bao",
+    "keyManagerAddr": "http://127.0.0.1:8200"
+  },
+  "logConfig": {
+    "level":"info",
+    "path":"",
+    "rotationFileSize":20,
+    "rotationFileCount":20
+  }
+}

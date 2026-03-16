@@ -1,0 +1,92 @@
+# -*- rpm-spec -*-
+Name:           cdf-crypto
+Version:        0.0.1
+Release:        1
+Summary:        Confidential Data defensive Framework
+Summary(zh_CN): 敏感数据保护框架（CDF）
+License:        MulanPSL-2.0
+URL:            https://atomgit.com/openeuler/cdf-crypto.git
+Source0:        %{name}-%{version}.tar.gz
+
+%define project_source_dir @PROJECT_SOURCE_DIR@
+
+%description
+cdf-crypto(Confidential Data defensive Framework) provides cryptographic algorithms and key security functions.
+
+%prep
+
+%build
+
+%install
+mkdir -p %{buildroot}%{_includedir}/cdf
+mkdir -p %{buildroot}%{_libdir}/cdf
+mkdir -p %{buildroot}%{_bindir}/cdf/config
+mkdir -p %{buildroot}%{_bindir}/cdf/bin
+
+# Move the compiled files to the package
+cp -r %{project_source_dir}/output/cdf/bin/* %{buildroot}%{_bindir}/cdf/bin
+cp -r %{project_source_dir}/output/cdf/config/* %{buildroot}%{_bindir}/cdf/config
+cp -r %{project_source_dir}/output/cdf/include/* %{buildroot}%{_includedir}/
+cp -r %{project_source_dir}/output/cdf/lib64/* %{buildroot}%{_libdir}/cdf
+
+find %{buildroot} -name "*.so" -exec chmod u+s {} \;
+find %{buildroot} -name "*.so.*" -exec chmod u+s {} \;
+
+%clean
+rm -rf %{buildroot}
+
+%files
+%defattr(750,root,root,750)
+
+# Directory permissions settings
+%dir %attr(750, root, root) %{_bindir}/cdf/config
+%dir %attr(750, root, root) %{_includedir}/cdf
+%dir %attr(750, root, root) %{_includedir}/cdf/base
+%dir %attr(750, root, root) %{_includedir}/cdf/modules
+%dir %attr(750, root, root) %{_includedir}/cdf/modules/authentication
+%dir %attr(750, root, root) %{_includedir}/cdf/modules/authorization
+%dir %attr(750, root, root) %{_includedir}/cdf/modules/cryption
+%dir %attr(750, root, root) %{_includedir}/cdf/modules/key_management
+%dir %attr(750, root, root) %{_includedir}/cdf/modules/psk_management
+%dir %attr(750, root, root) %{_includedir}/cdf/modules/rand
+%dir %attr(750, root, root) %{_libdir}/cdf
+
+# Configuration files
+%config(noreplace) %attr(640,root,root) %{_bindir}/cdf/config/crypto_tool_config.json
+
+# Binary files
+%attr(750, root, root) %{_bindir}/cdf/bin/*
+
+# Header files
+%attr(440, root, root) %{_includedir}/cdf/base/common_define.h
+%attr(440, root, root) %{_includedir}/cdf/base/custom_logger.h
+%attr(440, root, root) %{_includedir}/cdf/modules/authentication/jwt/define.h
+%attr(440, root, root) %{_includedir}/cdf/modules/authentication/jwt/jwt_auth_server.h
+%attr(440, root, root) %{_includedir}/cdf/modules/authentication/jwt/option.h
+%attr(440, root, root) %{_includedir}/cdf/modules/authentication/kerberos/define.h
+%attr(440, root, root) %{_includedir}/cdf/modules/authentication/kerberos/krb_client.h
+%attr(440, root, root) %{_includedir}/cdf/modules/authentication/kerberos/krb_server.h
+%attr(440, root, root) %{_includedir}/cdf/modules/authorization/error_code.h
+%attr(440, root, root) %{_includedir}/cdf/modules/authorization/whitelist_authorization.h
+%attr(440, root, root) %{_includedir}/cdf/modules/cryption/define.h
+%attr(440, root, root) %{_includedir}/cdf/modules/cryption/hash.h
+%attr(440, root, root) %{_includedir}/cdf/modules/cryption/km_cryptor.h
+%attr(440, root, root) %{_includedir}/cdf/modules/cryption/native_cryptor.h
+%attr(440, root, root) %{_includedir}/cdf/modules/cryption/native_cryptor_def.h
+%attr(440, root, root) %{_includedir}/cdf/modules/key_management/openbao/openbao_key_manager.h
+%attr(440, root, root) %{_includedir}/cdf/modules/key_management/vault/vault_key_manager.h
+%attr(440, root, root) %{_includedir}/cdf/modules/key_management/define.h
+%attr(440, root, root) %{_includedir}/cdf/modules/key_management/key_manager.h
+%attr(440, root, root) %{_includedir}/cdf/modules/key_management/key_manager_factory.h
+%attr(440, root, root) %{_includedir}/cdf/modules/psk_management/psk.h
+%attr(440, root, root) %{_includedir}/cdf/modules/psk_management/psk_callback_mgr.h
+%attr(440, root, root) %{_includedir}/cdf/modules/psk_management/psk_define.h
+%attr(440, root, root) %{_includedir}/cdf/modules/psk_management/psk_manager.h
+%attr(440, root, root) %{_includedir}/cdf/modules/rand/rand.h
+
+# Library files
+%attr(550, root, root) %{_libdir}/*
+
+%doc
+
+%changelog

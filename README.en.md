@@ -42,7 +42,18 @@ sh build.sh rpm
 + Install after RPM package building
 ```
 sudo rpm -ivh --nodes /package/rpm/cdf-crypto-*.rpm
+# set LD_LIBRARY_PATH
+echo 'export LD_LIBRARY_PATH=/usr/lib64/cdf:$LD_LIBRARY_PATH' >> ~/.bashrc
+source ~/.bashrc
 ```
+#### Documents
+
+- [api documentation](docs/api_documentation.md)
+- [usage guidelines](docs/usage_guidelines.md)
+
+#### License
+
+Confidential Data defensive Framework is licensed under Mulan PSL v2，see [LICENSE](LICENSE) for details。
 
 #### Contribution
 

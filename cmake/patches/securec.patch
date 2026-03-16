@@ -1,0 +1,13 @@
+diff --git a/src/Makefile b/src/Makefile
+index 6513bc4..280f4a5 100644
+--- a/src/Makefile
++++ b/src/Makefile
+@@ -85,7 +85,7 @@ PRODUCT_OPTION_FOR_SELECTION += -Wframe-larger-than=4096
+ PRODUCT_OPTION_FOR_SELECTION += -Wsuggest-attribute=format
+ PRODUCT_OPTION_FOR_SELECTION += -Wmissing-format-attribute
+ PRODUCT_OPTION_FOR_SELECTION += # -fno-inline-small-functions -fno-indirect-inlining -fno-inline-functions-called-once -fno-early-inlining -fno-inline
+-PRODUCT_OPTION_FOR_SELECTION += # -ftrapv
++PRODUCT_OPTION_FOR_SELECTION += -ftrapv
+ 
+ ifeq ($(CHECK_OPTION),check)
+ PRODUCT_OPTION := $(shell touch tmp.c; echo "int main(void){return 0;}" > tmp.c; \
