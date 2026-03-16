@@ -1,0 +1,22 @@
+# Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
+# 根据选项编译不同的源文件
+set(CDF_SOURCE_FILES
+    ${CDF_SOURCE_FILES}
+    ${CMAKE_CURRENT_LIST_DIR}/km_cryptor.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/native_cryptor.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/hmac.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/hash.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/native_cryptor_engine.cpp)
+
+set(CDF_SOURCE_FILES
+    ${CDF_SOURCE_FILES}
+    PARENT_SCOPE)
+
+
+install(
+  FILES ${CMAKE_CURRENT_LIST_DIR}/km_cryptor.h
+        ${CMAKE_CURRENT_LIST_DIR}/native_cryptor.h
+        ${CMAKE_CURRENT_LIST_DIR}/define.h
+        ${CMAKE_CURRENT_LIST_DIR}/native_cryptor_def.h
+        ${CMAKE_CURRENT_LIST_DIR}/hash.h
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/cdf/modules/cryption)

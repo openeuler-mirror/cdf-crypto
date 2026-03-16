@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <remote name="codehub_y" fetch="https://codehub-dg-y.huawei.com/"/>
+  <remote name="codehub_szv" fetch="https://szv-y.codehub.huawei.com/"/>
+  <remote name="codehub_lfg" fetch="https://lfg-y.codehub.huawei.com/"/>
+  <remote name="codehub_dg" fetch="https://codehub-dg-y.huawei.com/"/>
+  <remote name="codehub_szv_open" fetch="https://szv-open.codehub.huawei.com/"/>
+  <remote name="gitlab" fetch="https://gitlab.huawei.com/"/>
+  <remote name="isource" fetch="https://rnd-isource.huawei.com"/>
+  <remote name="gerrit" fetch="http://p_itrustee@iTrusteeGerrit.huawei.com/"/>
+  <remote name="opencodehub" fetch="https://open.codehub.huawei.com"/>
+  <default remote="codehub_y" revision="master"/>
+  <!-- opensource dependencies -->
+  <project remote="codehub_szv_open" name="OpenSourceCenter/google/googletest.git" path="CDF/external/gtest" revision="refs/tags/v1.14.0" groups="cdf_ut_rely"/>
+  <project remote="codehub_szv_open" name="OpenSourceCenter/krb5/krb5.git" path="CDF/external/krb5" revision="refs/tags/1.21.3-htrunk2" groups="cdf_rely"/>
+  <project remote="codehub_szv_open" name="OpenSourceCenter/openssl/openssl.git" path="CDF/external/openssl" revision="refs/tags/3.0.9-h1" groups="cdf_ut_rely"/>
+  <project remote="codehub_szv_open" name="OpenSourceCenter/Tencent/rapidjson.git" path="CDF/external/rapidjson" revision="refs/tags/6089180ecb704cb2b136777798fa1be303618975" groups="cdf_rely"/>
+  <project remote="codehub_szv_open" name="OpenSourceCenter/gabime/spdlog.git" path="CDF/external/spdlog" revision="refs/tags/v1.12.0" groups="cdf_rely"/>
+</manifest>
