@@ -18,11 +18,12 @@ CDF的全称是Confidential Data defensive Framework，提供敏感数据保护�
 + 编译环境要求：OpenEuler 内核版本不低于 kernel 6.6
 
 ```
-yum install -y rpm-build
-yum install -y make
-yum install -y cmake
-yum install -y gcc
-yum install -y gcc-c++
+sudo yum install -y rpm-build
+sudo yum install -y make
+sudo yum install -y cmake
+sudo yum install -y gcc
+sudo yum install -y gcc-c++
+sudo yum install -y libasan
 ```
 
 + 其他依赖默认自动下载

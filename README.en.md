@@ -15,11 +15,12 @@ Build And Install
 + You also need to install the following dependency packages
 
 ```
-yum install -y rpm-build
-yum install -y make
-yum install -y cmake
-yum install -y gcc
-yum install -y gcc-c++
+sudo yum install -y rpm-build
+sudo yum install -y make
+sudo yum install -y cmake
+sudo yum install -y gcc
+sudo yum install -y gcc-c++
+sudo yum install -y libasan
 ```
 + Other dependencies are downloaded automatically by default
 2. Build Instructions

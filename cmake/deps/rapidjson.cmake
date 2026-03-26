@@ -5,7 +5,7 @@
 if(ENABLE_DOWNLOAD_DEPENDENCY)
   set(DOWNLOAD_ARGS
       GIT_REPOSITORY
-      https://gitcode.com/gh_mirrors/rap/rapidjson.git
+      https://gitcode.com/GitHub_Trending/ra/rapidjson.git
       GIT_TAG master
       GIT_SUBMODULES_RECURSE
       Off
