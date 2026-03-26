@@ -13,6 +13,7 @@
 
 #include <unistd.h>
 
+#include <algorithm>
 #include <climits>
 #include <filesystem>
 #include <iostream>

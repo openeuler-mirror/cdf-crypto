@@ -165,7 +165,7 @@ function process_output() {
 
 function run_test() {
     if [[ "${enable_test}" == 'On' ]]; then
-        ctest --output-on-failure
+        ctest --output-junit test_results.xml --output-on-failure --test-output-size-passed 0 --test-output-size-failed 0
     fi
     if [[ "${enable_coverage}" == 'On' ]]; then
         make coverage
