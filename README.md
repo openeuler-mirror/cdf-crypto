@@ -23,6 +23,10 @@ sudo yum install -y make
 sudo yum install -y cmake
 sudo yum install -y gcc
 sudo yum install -y gcc-c++
+sudo yum install -y autoconf
+sudo yum install -y automake
+sudo yum install -y bison
+sudo yum install -y perl
 sudo yum install -y libasan
 ```
 
