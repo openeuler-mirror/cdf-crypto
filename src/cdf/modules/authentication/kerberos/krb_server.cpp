@@ -29,7 +29,7 @@
 
 #include "gssapi/gssapi.h"
 #include "krb5/krb5.h"
-#include "securec/securec.h"
+#include "securec.h"
 
 #include "cdf/base/ccsec_logger.h"
 #include "cdf/base/custom_logger.h"

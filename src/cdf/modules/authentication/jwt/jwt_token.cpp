@@ -15,7 +15,7 @@
 
 #include <string>
 
-#include "securec/securec.h"
+#include "securec.h"
 
 #include "cdf/base/ccsec_logger.h"
 #include "cdf/base/custom_logger.h"

@@ -189,6 +189,7 @@ function build_cmake() {
 
     if [[ "${build_target}" == 'test' ]]; then
         enable_test='On' # enable test
+        enable_download_dependency='Off'
         build_default
         run_test
     fi

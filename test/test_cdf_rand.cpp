@@ -12,7 +12,7 @@
  */
 
 #include "gtest/gtest.h"
-#include "securec/securec.h"
+#include "securec.h"
 #include "test_utils.h"
 
 #include "cdf/modules/rand/rand.h"

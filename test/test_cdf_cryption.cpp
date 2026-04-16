@@ -50,9 +50,24 @@
 
 namespace cdf::test {
 constexpr static auto SIZE = 1024 * 1024;
-class KmCryptorTest : public ::testing::Test {};
 
-class TestCrypto : public ::testing::Test {};
+class KmCryptorTest : public ::testing::Test
+{
+protected:
+    void SetUp() override
+    {
+        EXPECT_TRUE(Logger::Instance()->SetExternalLogFunction(SetExternalLogCallBack));
+    }
+};
+
+class TestCrypto : public ::testing::Test
+{
+protected:
+    void SetUp() override
+    {
+        EXPECT_TRUE(Logger::Instance()->SetExternalLogFunction(SetExternalLogCallBack));
+    }
+};
 
 namespace {
 

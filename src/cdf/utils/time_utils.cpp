@@ -17,7 +17,7 @@
 #include <cstdlib>
 #include <cstring>
 
-#include "securec/securec.h"
+#include "securec.h"
 
 #include "cdf/base/common_define.h"
 

@@ -19,7 +19,7 @@
 #include <string>
 
 #include "krb5/krb5.h"
-#include "securec/securec.h"
+#include "securec.h"
 
 #include "cdf/base/custom_logger.h"
 #include "cdf/connector/krb5_wrapper.h"

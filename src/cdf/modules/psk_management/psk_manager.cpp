@@ -17,7 +17,7 @@
 #include <iomanip>
 #include <sstream>
 
-#include "securec/securec.h"
+#include "securec.h"
 #include "rapidjson/document.h"
 #include "rapidjson/filereadstream.h"
 #include "rapidjson/stringbuffer.h"
