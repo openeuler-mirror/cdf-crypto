@@ -132,21 +132,7 @@ PskManagerRC DeletePskCb(const uint32_t pskId)
     return PskManagerRC::OK;
 }
 
-std::pair<KeyManagerRC, std::string> StubRunCommandAndGetResult([[maybe_unused]] std::string_view exePath,
-                                                                [[maybe_unused]] std::string_view accessToken,
-                                                                [[maybe_unused]] std::vector<char *> &cmdVec,
-                                                                [[maybe_unused]] std::string commandKey)
-{
-    return {KeyManagerRC::OK, ""};
-}
-
-KeyManagerRC StubGetJsonFieldIntPairVec([[maybe_unused]] const std::string &jsonStr,
-                                        [[maybe_unused]] std::vector<std::pair<uint32_t, uint32_t>> &out)
-{
-    return KeyManagerRC::OK;
-}
-
-std::pair<KeyManagerRC, std::vector<std::byte>> StubEncrypt([[maybe_unused]] const CryptoSymAlg &symAlg,
+std::pair<KeyManagerRC, std::vector<std::byte>> StubEncryptPsk([[maybe_unused]] const CryptoSymAlg &symAlg,
                                                             [[maybe_unused]] uint32_t domainId,
                                                             [[maybe_unused]] std::string_view plaintext)
 {
@@ -155,7 +141,7 @@ std::pair<KeyManagerRC, std::vector<std::byte>> StubEncrypt([[maybe_unused]] con
     return {KeyManagerRC::OK, vec};
 }
 
-std::pair<KeyManagerRC, std::vector<std::byte>> StubDecrypt([[maybe_unused]] const CryptoSymAlg &symAlg,
+std::pair<KeyManagerRC, std::vector<std::byte>> StubDecryptPsk([[maybe_unused]] const CryptoSymAlg &symAlg,
                                                             [[maybe_unused]] uint32_t domainId,
                                                             [[maybe_unused]] std::string_view ciphertext)
 {
@@ -261,7 +247,7 @@ TEST_F(TestCDFPskManager, NoInitExpectError)
     stub.Set(static_cast<std::pair<KeyManagerRC,
              std::vector<std::byte>> (OpenbaoKeyManager::*)
              (const CryptoSymAlg &, uint32_t, std::string_view)>(&OpenbaoKeyManager::Encrypt),
-             StubEncrypt);
+             StubEncryptPsk);
 
     auto &pskMgr = PskManager::GetInstance();
     auto ret = pskMgr.Init(options);
@@ -322,7 +308,7 @@ TEST_F(TestCDFPskManager, GeneratePskExpectOK)
     stub.Set(GetJsonFieldIntPairVec, StubGetJsonFieldIntPairVec);
     stub.Set(static_cast<std::pair<KeyManagerRC,
              std::vector<std::byte>> (OpenbaoKeyManager::*)
-             (const CryptoSymAlg &, uint32_t, std::string_view)>(&OpenbaoKeyManager::Encrypt), StubEncrypt);
+             (const CryptoSymAlg &, uint32_t, std::string_view)>(&OpenbaoKeyManager::Encrypt), StubEncryptPsk);
 
     auto &pskMgr = PskManager::GetInstance();
     auto ret = pskMgr.Init(options);
@@ -380,7 +366,7 @@ TEST_F(TestCDFPskManager, ImportPskExpectOK)
     stub.Set(GetJsonFieldIntPairVec, StubGetJsonFieldIntPairVec);
     stub.Set(static_cast<std::pair<KeyManagerRC,
              std::vector<std::byte>> (OpenbaoKeyManager::*)
-             (const CryptoSymAlg &, uint32_t, std::string_view)>(&OpenbaoKeyManager::Encrypt), StubEncrypt);
+             (const CryptoSymAlg &, uint32_t, std::string_view)>(&OpenbaoKeyManager::Encrypt), StubEncryptPsk);
 
     auto &pskMgr = PskManager::GetInstance();
     auto ret = pskMgr.Init(options);
@@ -417,7 +403,7 @@ TEST_F(TestCDFPskManager, UpdatePskExpectOK)
     stub.Set(GetJsonFieldIntPairVec, StubGetJsonFieldIntPairVec);
     stub.Set(static_cast<std::pair<KeyManagerRC,
              std::vector<std::byte>> (OpenbaoKeyManager::*)
-             (const CryptoSymAlg &, uint32_t, std::string_view)>(&OpenbaoKeyManager::Encrypt), StubEncrypt);
+             (const CryptoSymAlg &, uint32_t, std::string_view)>(&OpenbaoKeyManager::Encrypt), StubEncryptPsk);
     // 先生成新的PSK
     PsKManagerInitOptions options = {};
     SetDefaultInitOptions(options);
@@ -508,7 +494,7 @@ TEST_F(TestCDFPskManager, UpdatePskExpectError)
     stub.Set(GetJsonFieldIntPairVec, StubGetJsonFieldIntPairVec);
     stub.Set(static_cast<std::pair<KeyManagerRC,
              std::vector<std::byte>> (OpenbaoKeyManager::*)
-             (const CryptoSymAlg &, uint32_t, std::string_view)>(&OpenbaoKeyManager::Encrypt), StubEncrypt);
+             (const CryptoSymAlg &, uint32_t, std::string_view)>(&OpenbaoKeyManager::Encrypt), StubEncryptPsk);
     // 先生成新的PSK
     PsKManagerInitOptions options = {};
     SetDefaultInitOptions(options);
@@ -557,7 +543,7 @@ TEST_F(TestCDFPskManager, DeletePskExpectOK)
     stub.Set(GetJsonFieldIntPairVec, StubGetJsonFieldIntPairVec);
     stub.Set(static_cast<std::pair<KeyManagerRC,
              std::vector<std::byte>> (OpenbaoKeyManager::*)
-             (const CryptoSymAlg &, uint32_t, std::string_view)>(&OpenbaoKeyManager::Encrypt), StubEncrypt);
+             (const CryptoSymAlg &, uint32_t, std::string_view)>(&OpenbaoKeyManager::Encrypt), StubEncryptPsk);
     // 先生成新的PSK
     PsKManagerInitOptions options = {};
     SetDefaultInitOptions(options);
@@ -602,7 +588,7 @@ TEST_F(TestCDFPskManager, CheckPskValidExpectOK)
     stub.Set(GetJsonFieldIntPairVec, StubGetJsonFieldIntPairVec);
     stub.Set(static_cast<std::pair<KeyManagerRC,
              std::vector<std::byte>> (OpenbaoKeyManager::*)
-             (const CryptoSymAlg &, uint32_t, std::string_view)>(&OpenbaoKeyManager::Encrypt), StubEncrypt);
+             (const CryptoSymAlg &, uint32_t, std::string_view)>(&OpenbaoKeyManager::Encrypt), StubEncryptPsk);
     // 先生成新的PSK
     PsKManagerInitOptions options = {};
     SetDefaultInitOptions(options);
@@ -639,7 +625,7 @@ TEST_F(TestCDFPskManager, CheckPskValidAndAutoUpdateExpectOK)
     stub.Set(GetJsonFieldIntPairVec, StubGetJsonFieldIntPairVec);
     stub.Set(static_cast<std::pair<KeyManagerRC,
              std::vector<std::byte>> (OpenbaoKeyManager::*)
-             (const CryptoSymAlg &, uint32_t, std::string_view)>(&OpenbaoKeyManager::Encrypt), StubEncrypt);
+             (const CryptoSymAlg &, uint32_t, std::string_view)>(&OpenbaoKeyManager::Encrypt), StubEncryptPsk);
     // 先生成新的PSK
     PsKManagerInitOptions options = {};
     SetDefaultInitOptions(options);
@@ -676,10 +662,10 @@ TEST_F(TestCDFPskManager, LoadPskExpectOK)
     stub.Set(GetJsonFieldIntPairVec, StubGetJsonFieldIntPairVec);
     stub.Set(static_cast<std::pair<KeyManagerRC,
              std::vector<std::byte>> (OpenbaoKeyManager::*)
-             (const CryptoSymAlg &, uint32_t, std::string_view)>(&OpenbaoKeyManager::Encrypt), StubEncrypt);
+             (const CryptoSymAlg &, uint32_t, std::string_view)>(&OpenbaoKeyManager::Encrypt), StubEncryptPsk);
     stub.Set(static_cast<std::pair<KeyManagerRC,
              std::vector<std::byte>> (OpenbaoKeyManager::*)
-             (const CryptoSymAlg &, uint32_t, std::string_view)>(&OpenbaoKeyManager::Decrypt), StubDecrypt);
+             (const CryptoSymAlg &, uint32_t, std::string_view)>(&OpenbaoKeyManager::Decrypt), StubDecryptPsk);
     // 先生成新的PSK
     PsKManagerInitOptions options = {};
     SetDefaultInitOptions(options);
@@ -760,7 +746,7 @@ TEST_F(TestCDFPskManager, GetPskExpectOK)
     stub.Set(GetJsonFieldIntPairVec, StubGetJsonFieldIntPairVec);
     stub.Set(static_cast<std::pair<KeyManagerRC,
              std::vector<std::byte>> (OpenbaoKeyManager::*)
-             (const CryptoSymAlg &, uint32_t, std::string_view)>(&OpenbaoKeyManager::Encrypt), StubEncrypt);
+             (const CryptoSymAlg &, uint32_t, std::string_view)>(&OpenbaoKeyManager::Encrypt), StubEncryptPsk);
     // 先生成新的PSK
     PsKManagerInitOptions options = {};
     SetDefaultInitOptions(options);
@@ -796,7 +782,7 @@ TEST_F(TestCDFPskManager, GetPskMetaDataExpectOK)
     stub.Set(GetJsonFieldIntPairVec, StubGetJsonFieldIntPairVec);
     stub.Set(static_cast<std::pair<KeyManagerRC,
              std::vector<std::byte>> (OpenbaoKeyManager::*)
-             (const CryptoSymAlg &, uint32_t, std::string_view)>(&OpenbaoKeyManager::Encrypt), StubEncrypt);
+             (const CryptoSymAlg &, uint32_t, std::string_view)>(&OpenbaoKeyManager::Encrypt), StubEncryptPsk);
     // 先生成新的PSK
     PsKManagerInitOptions options = {};
     SetDefaultInitOptions(options);

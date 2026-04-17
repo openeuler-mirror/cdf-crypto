@@ -11,47 +11,75 @@
  * See the Mulan PSL v2 for more details.
  */
 
-#pragma once
+#include "test_utils.h"
 
-#include <string>
-#include <vector>
-
-#include "cdf/modules/cryption/km_cryptor.h"
-#include "cdf/modules/key_management/key_manager.h"
-#include "cdf/modules/key_management/key_manager_factory.h"
+#include <iostream>
+#include "gtest/gtest.h"
 
 namespace cdf::test {
+using namespace cdf;
 
-void EnsureKmUninited(KeyManager *km);
+void EnsureKmUninited(KeyManager *km)
+{
+    if (km->CheckInited()) {
+        auto rc = km->UnInit();
+        ASSERT_EQ(rc, KeyManagerRC::OK);
+    }
+}
 
-void EnsureKmUninited(KeyManagerTy type);
+void EnsureKmUninited(KeyManagerTy type)
+{
+    auto *km = KeyManagerFactory::Borrow(type);
+    EnsureKmUninited(km);
+}
 
-void SetExternalLogCallBack(int level, const char *msg);
+void SetExternalLogCallBack(int level, const char *msg)
+{
+    std::cout << "|level:|" << level << " |msg: " << msg << std::endl;
+}
 
-// Common stub functions (signature-consistent across files)
 std::pair<KeyManagerRC, std::string> StubRunCommandAndGetResult(
     [[maybe_unused]] std::string_view exePath,
     [[maybe_unused]] std::string_view accessToken,
     [[maybe_unused]] std::vector<char *> &cmdVec,
-    [[maybe_unused]] std::string commandKey);
+    [[maybe_unused]] std::string commandKey)
+{
+    return {KeyManagerRC::OK, ""};
+}
 
 KeyManagerRC StubGetJsonFieldIntPairVec(
     [[maybe_unused]] const std::string &jsonStr,
-    [[maybe_unused]] std::vector<std::pair<uint32_t, uint32_t>> &out);
+    [[maybe_unused]] std::vector<std::pair<uint32_t, uint32_t>> &out)
+{
+    return KeyManagerRC::OK;
+}
 
-int StubGetJsonFieldMaxInt([[maybe_unused]] const std::string &jsonStr);
+int StubGetJsonFieldMaxInt([[maybe_unused]] const std::string &jsonStr)
+{
+    return 0;
+}
 
-std::string StubGetOpenbaoLastKeyAsStr([[maybe_unused]] const std::string &readResultStr);
+std::string StubGetOpenbaoLastKeyAsStr([[maybe_unused]] const std::string &readResultStr)
+{
+    return "test";
+}
 
-// Stub for OpenbaoKeyManager::Encrypt/Decrypt (uint32_t domainId, string_view plaintext)
 std::pair<KeyManagerRC, std::vector<std::byte>> StubEncryptOpenbao(
     [[maybe_unused]] const CryptoSymAlg &symAlg,
     [[maybe_unused]] uint32_t domainId,
-    [[maybe_unused]] std::string_view plaintext);
+    [[maybe_unused]] std::string_view plaintext)
+{
+    std::vector<std::byte> vec(64);
+    return {KeyManagerRC::OK, vec};
+}
 
 std::pair<KeyManagerRC, std::vector<std::byte>> StubDecryptOpenbao(
     [[maybe_unused]] const CryptoSymAlg &alg,
     [[maybe_unused]] uint32_t domainId,
-    [[maybe_unused]] std::string_view ciphertext);
+    [[maybe_unused]] std::string_view ciphertext)
+{
+    std::vector<std::byte> vec(64);
+    return {KeyManagerRC::OK, vec};
+}
 
 } // namespace cdf::test
