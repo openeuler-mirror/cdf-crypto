@@ -4,7 +4,7 @@
  * You can use this software according to the terms and conditions of the Mulan
  * PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
-          * http://license.coscl.org.cn/MulanPSL2
+ *          http://license.coscl.org.cn/MulanPSL2
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY
  * KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO
  * NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
@@ -13,6 +13,7 @@
 
 #include <unistd.h>
 
+#include <algorithm>
 #include <climits>
 #include <filesystem>
 #include <iostream>
@@ -31,6 +32,8 @@
 
 #include <krb5/krb5.h>
 
+#include "openssl/evp.h"
+
 #include "cdf/base/custom_logger.h"
 #include "cdf/modules/cryption/define.h"
 #include "cdf/modules/cryption/hash.h"
@@ -38,20 +41,31 @@
 #include "cdf/modules/cryption/km_cryptor.h"
 #include "cdf/modules/cryption/native_cryptor.h"
 #include "cdf/modules/cryption/native_cryptor_engine.h"
-#include "openssl/evp.h"
 #include "cdf/modules/key_management/define.h"
 #include "cdf/modules/key_management/key_manager.h"
 #include "cdf/modules/key_management/key_manager_factory.h"
-#include "cdf/modules/rand/rand.h"
-#include "cdf/modules/key_management/openbao/openbao_utils.h"
 #include "cdf/modules/key_management/openbao/openbao_key_manager.h"
-#include "cdf/modules/cryption/km_cryptor.h"
+#include "cdf/modules/key_management/openbao/openbao_utils.h"
+#include "cdf/modules/rand/rand.h"
 
 namespace cdf::test {
 constexpr static auto SIZE = 1024 * 1024;
-class KmCryptorTest : public ::testing::Test {};
 
-class TestCrypto : public ::testing::Test {};
+class KmCryptorTest : public ::testing::Test {
+protected:
+    void SetUp() override
+    {
+        EXPECT_TRUE(Logger::Instance()->SetExternalLogFunction(SetExternalLogCallBack));
+    }
+};
+
+class TestCrypto : public ::testing::Test {
+protected:
+    void SetUp() override
+    {
+        EXPECT_TRUE(Logger::Instance()->SetExternalLogFunction(SetExternalLogCallBack));
+    }
+};
 
 namespace {
 
@@ -72,7 +86,6 @@ inline std::string VecByteToString(std::vector<std::byte> in)
 inline void KmcOperation(int userId, KeyManager *km)
 {
     const int defaultIteratonNum = 3000;
-//    Logger::Instance()->SetLevel(LogLevel::LOG_LEVEL_WARN);
     auto cryptor = KmCryptor(km);
     for (int i = 0; i < defaultIteratonNum; ++i) {
         auto ret = cryptor.Encrypt(CryptoSymAlg::AES256_GCM, "1111111111", 0);
@@ -98,7 +111,7 @@ bool StubFinalizeError([[maybe_unused]] std::vector<char> &output)
     return false;
 }
 
-EVP_MD_CTX* StubEvpMdCtxNewError()
+EVP_MD_CTX *StubEvpMdCtxNewError()
 {
     return nullptr;
 }
@@ -250,7 +263,6 @@ TEST_F(TestCrypto, NativeCryptor_Encrypt_Decrypt_ParamLongPlaintext)
     ret = cryptor.Decrypt(CryptoSymAlg::CHACHA20_POLY1305, ret.second, key2);
     EXPECT_EQ(ret.first, CryptionRC::OK);
 }
-
 
 TEST_F(TestCrypto, NativeCryptor_Encrypt_Decrypt_ParamKey)
 {
@@ -492,7 +504,6 @@ TEST_F(KmCryptorTest, Sha256Success)
     }
     EXPECT_EQ(output3, vec);
 }
-
 
 TEST_F(KmCryptorTest, Sha256UpdateError)
 {

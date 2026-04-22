@@ -180,8 +180,13 @@ bool FileUtils::CheckOwner(const std::string &filePath, std::string &errMsg)
 
 bool FileUtils::IsFileValid(const std::string &configFile, std::string &errMsg)
 {
-    if (!CheckFileExists(configFile)) {
+    struct stat buffer{};
+    if (stat(configFile.c_str(), &buffer) != 0) {
         errMsg = "The input file is not a regular file or not exists";
+        return false;
+    }
+    if (S_ISDIR(buffer.st_mode)) {
+        errMsg = "The input path is a directory, not a regular file";
         return false;
     }
     size_t fileSize = GetFileSize(configFile);

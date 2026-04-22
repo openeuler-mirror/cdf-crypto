@@ -35,9 +35,7 @@ function(setup_coverage)
       COMMAND echo "lcov_excl_br_line = \"LCOV_EXCL_BR_LINE|RACK_LOG_*\"" >>
               ${LCOV_CONFIG_FILE} # 排除 RACK 开头的宏日志计算到分支覆盖率
       COMMAND
-        ${LCOV_PATH} --include '${PROJECT_SOURCE_DIR}/src/*' --exclude
-        '${PROJECT_SOURCE_DIR}/src/cdf/modules/key_management/kmc/private/*'
-        --config-file ${LCOV_CONFIG_FILE} -d ${CMAKE_BINARY_DIR}/src -c -o
+        ${LCOV_PATH} --include '${PROJECT_SOURCE_DIR}/src/*' --config-file ${LCOV_CONFIG_FILE} -d ${CMAKE_BINARY_DIR}/src -c -o
         ${COVERAGE_DIR}/coverage.info --gcov-tool=${GCOV_PATH} # 获取所有覆盖率信息
       #   ${Python3} cmake/scripts/filter_tool.py --input
       #   ${COVERAGE_DIR}/coverage.info --output ${COVERAGE_DIR}/filter.info

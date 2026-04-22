@@ -12,14 +12,26 @@ Build And Install
 1. Compilation Environment Requirements
 
 + OpenEuler Kernel VerSion >= 6.6
++ Openssl version: 3.0.9
 + You also need to install the following dependency packages
 
 ```
-yum install -y rpm-build
-yum install -y make
-yum install -y cmake
-yum install -y gcc
-yum install -y gcc-c++
+sudo yum install -y rpm-build
+sudo yum install -y make
+sudo yum install -y cmake
+sudo yum install -y gcc
+sudo yum install -y gcc-c++
+sudo yum install -y autoconf
+sudo yum install -y automake
+sudo yum install -y bison
+sudo yum install -y perl
+sudo yum install -y libboundscheck
+sudo yum install -y rapidjson-devel
+sudo yum install -y openssl
+sudo yum install -y openssl-devel
+sudo yum install -y krb5-devel
+sudo yum install -y krb5-libs
+sudo yum install -y libasan
 ```
 + Other dependencies are downloaded automatically by default
 2. Build Instructions

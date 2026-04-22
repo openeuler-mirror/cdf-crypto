@@ -17,6 +17,7 @@
 
 #include "gtest/gtest.h"
 #include "stub.h"
+#include "test_utils.h"
 
 #include "cdf/modules/cryption/km_cryptor.h"
 #include "cdf/modules/cryption/native_cryptor.h"
@@ -64,19 +65,6 @@ std::string StubGetOpenbaoLastKeyAsStrError([[maybe_unused]] const std::string &
     return "";
 }
 
-std::string StubGetOpenbaoLastKeyAsStr([[maybe_unused]] const std::string &readResultStr)
-{
-    return "test";
-}
-
-std::pair<KeyManagerRC, std::string> StubRunCommandAndGetResult([[maybe_unused]] std::string_view exePath,
-                                                                [[maybe_unused]] std::string_view accessToken,
-                                                                [[maybe_unused]] std::vector<char *> &cmdVec,
-                                                                [[maybe_unused]] std::string commandKey)
-{
-    return {KeyManagerRC::OK, ""};
-}
-
 std::pair<CryptionRC, std::vector<std::byte>> StubEncrypt([[maybe_unused]] const CryptoSymAlg &alg,
                                                           [[maybe_unused]] std::vector<std::byte> &plaintext,
                                                           [[maybe_unused]] std::vector<std::byte> &key)
@@ -107,17 +95,6 @@ std::pair<CryptionRC, std::vector<std::byte>> StubDecryptError([[maybe_unused]] 
                                                                [[maybe_unused]] std::vector<std::byte> &key)
 {
     return {CryptionRC::ERROR, {}};
-}
-
-int StubGetJsonFieldMaxInt([[maybe_unused]] const std::string &jsonStr)
-{
-    return 0;
-}
-
-KeyManagerRC StubGetJsonFieldIntPairVec([[maybe_unused]] const std::string &jsonStr,
-    [[maybe_unused]] std::vector<std::pair<uint32_t, uint32_t>> &out)
-{
-    return KeyManagerRC::OK;
 }
 
 TEST_F(KeyManagerOpenbaoTest, UnInit)

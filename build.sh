@@ -165,7 +165,7 @@ function process_output() {
 
 function run_test() {
     if [[ "${enable_test}" == 'On' ]]; then
-        ctest --output-on-failure
+      make build_test -j${CPU_NUM}
     fi
     if [[ "${enable_coverage}" == 'On' ]]; then
         make coverage
@@ -189,6 +189,7 @@ function build_cmake() {
 
     if [[ "${build_target}" == 'test' ]]; then
         enable_test='On' # enable test
+        enable_download_dependency='Off'
         build_default
         run_test
     fi

@@ -20,6 +20,7 @@
 
 #include "gtest/gtest.h"
 #include "stub.h"
+#include "test_utils.h"
 #include "cdf/modules/authentication/jwt/define.h"
 #include "cdf/modules/authentication/jwt/jwt_auth_server.h"
 #include "cdf/modules/authentication/jwt/option.h"
@@ -40,11 +41,6 @@ constexpr int DEFAULT_DOMAIN_COUNT = 2;
 
 } // namespace
 
-void SetExternalLogCallBack(int level, const char *msg)
-{
-    std::cout << "|ut log|level:|" << level << " msg: " << msg << std::endl;
-}
-
 class TestCDFAuthenticationJwt : public testing ::Test {
 protected:
     void SetUp() override
@@ -57,19 +53,6 @@ protected:
         // Perform any necessary cleanup for the test cases
     }
 };
-
-std::string StubGetOpenbaoLastKeyAsStr([[maybe_unused]] const std::string &readResultStr)
-{
-    return "test";
-}
-
-std::pair<KeyManagerRC, std::string> StubRunCommandAndGetResult([[maybe_unused]] std::string_view exePath,
-                                                                [[maybe_unused]] std::string_view accessToken,
-                                                                [[maybe_unused]] std::vector<char *> &cmdVec,
-                                                                [[maybe_unused]] std::string commandKey)
-{
-    return {KeyManagerRC::OK, ""};
-}
 
 std::pair<KeyManagerRC, std::vector<std::byte>> StubEncrypt([[maybe_unused]] const CryptoSymAlg &symAlg,
                                                             [[maybe_unused]] uint32_t domainId,
@@ -101,17 +84,6 @@ std::pair<KeyManagerRC, std::vector<std::byte>> StubDecrypt2([[maybe_unused]] co
 {
     std::vector<std::byte> vec(64, std::byte(1));
     return {KeyManagerRC::OK, vec};
-}
-
-int StubGetJsonFieldMaxInt([[maybe_unused]] const std::string &jsonStr)
-{
-    return 0;
-}
-
-KeyManagerRC StubGetJsonFieldIntPairVec([[maybe_unused]] const std::string &jsonStr,
-                                        [[maybe_unused]] std::vector<std::pair<uint32_t, uint32_t>> &out)
-{
-    return KeyManagerRC::OK;
 }
 
 void SetStubOpenbaoFunc(Stub &stub)

@@ -18,7 +18,7 @@
 #include <iostream>
 #include <iterator> // 用于 std::begin 和 std::end
 
-#include "securec/securec.h"
+#include "securec.h"
 #include "cdf/base/ccsec_logger.h"
 #include "hash.h"
 

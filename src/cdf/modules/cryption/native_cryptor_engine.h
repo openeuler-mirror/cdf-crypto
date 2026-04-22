@@ -16,7 +16,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "securec/securec.h"
+#include "securec.h"
 
 #include "cdf/modules/cryption/native_cryptor.h"
 

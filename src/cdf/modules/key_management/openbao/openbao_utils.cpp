@@ -24,7 +24,7 @@
 #include <vector>
 
 #include "rapidjson/document.h"
-#include "securec/securec.h"
+#include "securec.h"
 
 #include "cdf/base/ccsec_logger.h"
 #include "cdf/base/common_define.h"

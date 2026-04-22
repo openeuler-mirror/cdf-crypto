@@ -16,7 +16,7 @@
 
 #include "gtest/gtest.h"
 #include "krb5/krb5.h"
-#include "securec/securec.h"
+#include "securec.h"
 
 #include "cdf/modules/authentication/kerberos/krb_client.h"
 #include "cdf/modules/authentication/kerberos/krb_ctx.h"
