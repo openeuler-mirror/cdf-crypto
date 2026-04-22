@@ -66,15 +66,15 @@ std::pair<KeyManagerRC, std::vector<std::byte>> StubEncryptOpenbao([[maybe_unuse
                                                                    [[maybe_unused]] uint32_t domainId,
                                                                    [[maybe_unused]] std::string_view plaintext)
 {
-    std::vector<std::byte> stubEncryptData(64);
-    return {KeyManagerRC::OK, stubEncryptData};
+    std::vector<std::byte> vec(DEFAULT_VEC_SIZE);
+    return {KeyManagerRC::OK, vec};
 }
 
 std::pair<KeyManagerRC, std::vector<std::byte>> StubDecryptOpenbao([[maybe_unused]] const CryptoSymAlg &alg,
                                                                    [[maybe_unused]] uint32_t domainId,
                                                                    [[maybe_unused]] std::string_view ciphertext)
 {
-    std::vector<std::byte> stubDecryptData(64);
-    return {KeyManagerRC::OK, stubDecryptData};
+    std::vector<std::byte> vec(DEFAULT_VEC_SIZE);
+    return {KeyManagerRC::OK, vec};
 }
 } // namespace cdf::test

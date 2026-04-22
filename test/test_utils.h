@@ -21,6 +21,7 @@
 #include "cdf/modules/key_management/key_manager_factory.h"
 
 namespace cdf::test {
+constexpr uint32_t DEFAULT_VEC_SIZE = 64;
 
 void EnsureKmUninited(KeyManager *km);
 

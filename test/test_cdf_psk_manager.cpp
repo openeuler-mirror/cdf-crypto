@@ -36,7 +36,7 @@ const std::string KM_EXEPATH = "./";
 const std::string KM_ACCESSTOKEN = "testToken";
 
 constexpr int DEFAULT_DOMAIN_COUNT = 2;
-const std::string filename = "test_bytes.bin"; // 临时文件
+const std::string TEMP_FILENAME = "test_bytes.bin"; // 临时文件
 
 } // namespace
 
@@ -118,7 +118,7 @@ PskManagerRC CreatePskCb(const uint32_t pskId, const std::vector<std::byte> pskC
     (void)pskId;
     // 写入文件（二进制模式，保留原始字节）
     {
-        std::ofstream ofs(filename, std::ios::binary); // 二进制模式关键
+        std::ofstream ofs(TEMP_FILENAME, std::ios::binary); // 二进制模式关键
 
         // 写入字节数据（直接写 vector 的原始数据）
         ofs.write(reinterpret_cast<const char *>(pskCiphertext.data()), pskCiphertext.size());
@@ -340,7 +340,7 @@ TEST_F(TestCDFPskManager, GeneratePskExpectOK)
     PskCallbackMgr &manager = PskCallbackMgr::GetInstance();
     manager.RegisterCreatePskCallBack(CreatePskCb);
     ret = pskMgr.GeneratePsk(pskParam, outputPsk);
-    std::remove(filename.c_str());
+    std::remove(TEMP_FILENAME.c_str());
     EXPECT_EQ(ret, PskManagerRC::OK);
 
     ret = pskMgr.UnInit();
@@ -692,32 +692,26 @@ TEST_F(TestCDFPskManager, LoadPskExpectOK)
     EXPECT_EQ(ret, PskManagerRC::PSK_NOT_EXIST);
 
     // 读取回调函数存储的文件到 string 类型
-    std::vector<std::byte> read_bytes;
+    std::string readStr;
     {
-        std::ifstream ifs(filename, std::ios::binary | std::ios::ate);
+        std::ifstream ifs(TEMP_FILENAME, std::ios::binary | std::ios::ate);
         ASSERT_TRUE(ifs.is_open());
 
-        // 获取文件大小，预分配 vector 内存
+        // 获取文件大小，预分配 string 内存
         std::streamsize size = ifs.tellg();
-        read_bytes.resize(static_cast<size_t>(size));
+        readStr.resize(static_cast<size_t>(size));
 
         // 定位到文件头，读取所有字节
         ifs.seekg(0);
-        ifs.read(reinterpret_cast<char *>(read_bytes.data()), size);
+        ifs.read(readStr.data(), size);
         ASSERT_TRUE(ifs.good());
     } // ifs 超出作用域自动关闭
-    std::string read_str; // 单个字符串存储所有字节
-    read_str.reserve(read_bytes.size());
-    for (const auto &b : read_bytes) {
-        // 每个 byte 转换为 char 后拼接到字符串中
-        read_str += static_cast<char>(b);
-    }
-    std::vector<std::string> read_strs = {read_str};
-    std::remove(filename.c_str());
+    std::vector<std::string> read_strs = {readStr};
+    std::remove(TEMP_FILENAME.c_str());
     // Load存储文件中的字符串
     std::vector<std::string> pskList;
-    pskList.push_back(read_str);
-    pskList.push_back(read_str);
+    pskList.push_back(readStr);
+    pskList.push_back(readStr);
     ret = pskMgr.LoadAllPsk(pskList);
     EXPECT_EQ(ret, PskManagerRC::OK);
 
