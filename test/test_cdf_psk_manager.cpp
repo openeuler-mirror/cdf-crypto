@@ -4,7 +4,7 @@
  * You can use this software according to the terms and conditions of the Mulan
  * PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
-          * http://license.coscl.org.cn/MulanPSL2
+ *          http://license.coscl.org.cn/MulanPSL2
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY
  * KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO
  * NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
@@ -18,14 +18,14 @@
 
 #include "gtest/gtest.h"
 #include "stub.h"
-
 #include "test_utils.h"
+
 #include "cdf/modules/cryption/km_cryptor.h"
-#include "cdf/modules/psk_management/psk_define.h"
-#include "cdf/modules/psk_management/psk_manager.h"
 #include "cdf/modules/key_management/key_manager_factory.h"
 #include "cdf/modules/key_management/openbao/openbao_key_manager.h"
 #include "cdf/modules/key_management/openbao/openbao_utils.h"
+#include "cdf/modules/psk_management/psk_define.h"
+#include "cdf/modules/psk_management/psk_manager.h"
 #include "cdf/modules/rand/rand.h"
 
 namespace cdf::test {
@@ -36,7 +36,7 @@ const std::string KM_EXEPATH = "./";
 const std::string KM_ACCESSTOKEN = "testToken";
 
 constexpr int DEFAULT_DOMAIN_COUNT = 2;
-const std::string filename = "test_bytes.bin";  // 临时文件
+const std::string filename = "test_bytes.bin"; // 临时文件
 
 } // namespace
 
@@ -118,11 +118,11 @@ PskManagerRC CreatePskCb(const uint32_t pskId, const std::vector<std::byte> pskC
     (void)pskId;
     // 写入文件（二进制模式，保留原始字节）
     {
-        std::ofstream ofs(filename, std::ios::binary);  // 二进制模式关键
+        std::ofstream ofs(filename, std::ios::binary); // 二进制模式关键
 
         // 写入字节数据（直接写 vector 的原始数据）
-        ofs.write(reinterpret_cast<const char*>(pskCiphertext.data()), pskCiphertext.size());
-    }  // ofs 超出作用域自动关闭
+        ofs.write(reinterpret_cast<const char *>(pskCiphertext.data()), pskCiphertext.size());
+    } // ofs 超出作用域自动关闭
     return PskManagerRC::OK;
 }
 
@@ -133,8 +133,8 @@ PskManagerRC DeletePskCb(const uint32_t pskId)
 }
 
 std::pair<KeyManagerRC, std::vector<std::byte>> StubEncryptPsk([[maybe_unused]] const CryptoSymAlg &symAlg,
-                                                            [[maybe_unused]] uint32_t domainId,
-                                                            [[maybe_unused]] std::string_view plaintext)
+                                                               [[maybe_unused]] uint32_t domainId,
+                                                               [[maybe_unused]] std::string_view plaintext)
 {
     std::vector<std::byte> vec;
     vec.push_back(std::byte(0));
@@ -142,39 +142,36 @@ std::pair<KeyManagerRC, std::vector<std::byte>> StubEncryptPsk([[maybe_unused]] 
 }
 
 std::pair<KeyManagerRC, std::vector<std::byte>> StubDecryptPsk([[maybe_unused]] const CryptoSymAlg &symAlg,
-                                                            [[maybe_unused]] uint32_t domainId,
-                                                            [[maybe_unused]] std::string_view ciphertext)
+                                                               [[maybe_unused]] uint32_t domainId,
+                                                               [[maybe_unused]] std::string_view ciphertext)
 {
     std::vector<int> int_vec = {
-            65, 47, 106, 56, 75, 114, 54, 77, 118, 55, 80, 98, 114, 78, 104, 116, 97, 85, 115, 117,
-            52, 76, 49, 82, 57, 102, 84, 109, 43, 66, 55, 43, 69, 80, 84, 102, 121, 81, 99, 50, 89,
-            69, 99, 98, 112, 102, 71, 88, 75, 83, 48, 69, 89, 88, 78, 51, 109, 100, 88, 70, 122, 88,
-            114, 99, 112, 78, 89, 81, 104, 98, 80, 70, 66, 89, 116, 49, 103, 115, 100, 87, 84, 84,
-            79, 113, 47, 99, 99, 98, 82, 90, 47, 101, 90, 79, 77, 55, 89, 57, 118, 67, 87, 82, 71,
-            108, 76, 79, 85, 67, 50, 67, 69, 84, 117, 54, 50, 83, 115, 80, 100, 118, 108, 121, 43,
-            55, 81, 67, 52, 107, 85, 78, 74, 56, 77, 114, 119, 114, 49, 81, 110, 57, 85, 102, 73,
-            104, 88, 104, 109, 68, 47, 88, 52, 114, 116, 67, 76, 118, 65, 114, 67, 104, 56, 118, 97,
-            107, 81, 101, 47, 111, 87, 57, 107, 74, 99, 97, 78, 110, 89, 86, 76, 70, 55, 71, 83,
-            85, 111, 110, 110, 90, 105, 97, 76, 50, 87, 67, 78, 120, 122, 51, 43, 55, 110, 79, 110,
-            53, 121, 73, 84, 56, 98, 117, 55, 103, 70, 54, 52, 117, 120, 83, 74, 98, 69, 52, 53,
-            43, 48, 119, 68, 97, 79, 112, 80, 69, 51, 51, 74, 120, 105, 68, 85, 69, 81, 52, 82, 56,
-            72, 70, 75, 68, 67, 65, 89, 71, 51, 103, 103, 103, 97, 115, 65, 84, 107, 103, 78, 52,
-            104, 72, 69, 79, 65, 121, 69, 75, 54, 97, 105, 78, 102, 57, 53, 115, 48, 110, 104, 51,
-            101, 111, 113, 74, 100, 49, 118, 87, 108, 81, 77, 105, 50, 65, 51, 97, 73, 65, 84, 119,
-            43, 112, 115, 54, 107, 87, 115, 71, 57, 71, 109, 108, 107, 54, 73, 115, 49, 56, 72, 54,
-            79, 112, 47, 98, 73, 72, 81, 74, 112, 71, 77, 85, 54, 52, 68, 108, 77, 81, 61, 61, 46,
-            101, 121, 74, 119, 99, 50, 116, 74, 90, 67, 73, 54, 77, 83, 119, 105, 97, 88, 78, 122,
-            100, 87, 86, 121, 73, 106, 111, 105, 83, 72, 86, 104, 100, 50, 86, 112, 73, 105, 119,
-            105, 99, 51, 86, 105, 97, 109, 86, 106, 100, 67, 73, 54, 73, 107, 78, 118, 98, 88, 66,
-            49, 100, 71, 108, 117, 90, 121, 66, 84, 90, 87, 78, 49, 99, 109, 108, 48, 101, 86, 78,
-            118, 98, 72, 86, 48, 97, 87, 57, 117, 73, 105, 119, 105, 99, 72, 78, 114, 84, 71, 86,
-            117, 90, 51, 82, 111, 73, 106, 111, 121, 78, 84, 89, 115, 73, 110, 90, 104, 98, 71, 108,
-            107, 82, 71, 70, 53, 99, 121, 73, 54, 77, 122, 65, 115, 73, 109, 74, 108, 90, 50, 108,
-            117, 86, 71, 108, 116, 90, 83, 73, 54, 73, 106, 73, 119, 77, 106, 85, 116, 77, 84, 69,
-            116, 77, 106, 103, 103, 77, 84, 85, 54, 77, 122, 65, 54, 77, 122, 69, 105, 76, 67, 74,
-            108, 98, 109, 82, 85, 97, 87, 49, 108, 73, 106, 111, 105, 77, 106, 65, 121, 78, 83, 48,
-            120, 77, 105, 48, 121, 79, 67, 65, 120, 78, 84, 111, 122, 77, 68, 111, 122, 77, 83, 74, 57
-    };
+        65,  47,  106, 56,  75,  114, 54,  77,  118, 55,  80,  98,  114, 78,  104, 116, 97,  85,  115, 117, 52,  76,
+        49,  82,  57,  102, 84,  109, 43,  66,  55,  43,  69,  80,  84,  102, 121, 81,  99,  50,  89,  69,  99,  98,
+        112, 102, 71,  88,  75,  83,  48,  69,  89,  88,  78,  51,  109, 100, 88,  70,  122, 88,  114, 99,  112, 78,
+        89,  81,  104, 98,  80,  70,  66,  89,  116, 49,  103, 115, 100, 87,  84,  84,  79,  113, 47,  99,  99,  98,
+        82,  90,  47,  101, 90,  79,  77,  55,  89,  57,  118, 67,  87,  82,  71,  108, 76,  79,  85,  67,  50,  67,
+        69,  84,  117, 54,  50,  83,  115, 80,  100, 118, 108, 121, 43,  55,  81,  67,  52,  107, 85,  78,  74,  56,
+        77,  114, 119, 114, 49,  81,  110, 57,  85,  102, 73,  104, 88,  104, 109, 68,  47,  88,  52,  114, 116, 67,
+        76,  118, 65,  114, 67,  104, 56,  118, 97,  107, 81,  101, 47,  111, 87,  57,  107, 74,  99,  97,  78,  110,
+        89,  86,  76,  70,  55,  71,  83,  85,  111, 110, 110, 90,  105, 97,  76,  50,  87,  67,  78,  120, 122, 51,
+        43,  55,  110, 79,  110, 53,  121, 73,  84,  56,  98,  117, 55,  103, 70,  54,  52,  117, 120, 83,  74,  98,
+        69,  52,  53,  43,  48,  119, 68,  97,  79,  112, 80,  69,  51,  51,  74,  120, 105, 68,  85,  69,  81,  52,
+        82,  56,  72,  70,  75,  68,  67,  65,  89,  71,  51,  103, 103, 103, 97,  115, 65,  84,  107, 103, 78,  52,
+        104, 72,  69,  79,  65,  121, 69,  75,  54,  97,  105, 78,  102, 57,  53,  115, 48,  110, 104, 51,  101, 111,
+        113, 74,  100, 49,  118, 87,  108, 81,  77,  105, 50,  65,  51,  97,  73,  65,  84,  119, 43,  112, 115, 54,
+        107, 87,  115, 71,  57,  71,  109, 108, 107, 54,  73,  115, 49,  56,  72,  54,  79,  112, 47,  98,  73,  72,
+        81,  74,  112, 71,  77,  85,  54,  52,  68,  108, 77,  81,  61,  61,  46,  101, 121, 74,  119, 99,  50,  116,
+        74,  90,  67,  73,  54,  77,  83,  119, 105, 97,  88,  78,  122, 100, 87,  86,  121, 73,  106, 111, 105, 83,
+        72,  86,  104, 100, 50,  86,  112, 73,  105, 119, 105, 99,  51,  86,  105, 97,  109, 86,  106, 100, 67,  73,
+        54,  73,  107, 78,  118, 98,  88,  66,  49,  100, 71,  108, 117, 90,  121, 66,  84,  90,  87,  78,  49,  99,
+        109, 108, 48,  101, 86,  78,  118, 98,  72,  86,  48,  97,  87,  57,  117, 73,  105, 119, 105, 99,  72,  78,
+        114, 84,  71,  86,  117, 90,  51,  82,  111, 73,  106, 111, 121, 78,  84,  89,  115, 73,  110, 90,  104, 98,
+        71,  108, 107, 82,  71,  70,  53,  99,  121, 73,  54,  77,  122, 65,  115, 73,  109, 74,  108, 90,  50,  108,
+        117, 86,  71,  108, 116, 90,  83,  73,  54,  73,  106, 73,  119, 77,  106, 85,  116, 77,  84,  69,  116, 77,
+        106, 103, 103, 77,  84,  85,  54,  77,  122, 65,  54,  77,  122, 69,  105, 76,  67,  74,  108, 98,  109, 82,
+        85,  97,  87,  49,  108, 73,  106, 111, 105, 77,  106, 65,  121, 78,  83,  48,  120, 77,  105, 48,  121, 79,
+        67,  65,  120, 78,  84,  111, 122, 77,  68,  111, 122, 77,  83,  74,  57};
     std::vector<std::byte> vec;
 
     for (int value : int_vec) {
@@ -419,11 +416,11 @@ TEST_F(TestCDFPskManager, UpdatePskExpectOK)
     ret = pskMgr.GeneratePsk(pskParam, outputPsk);
     EXPECT_EQ(ret, PskManagerRC::OK);
 
-    sleep(1);   // 休息1秒，判断更新后的开始时间是否更改
+    sleep(1); // 休息1秒，判断更新后的开始时间是否更改
     // 没有注册回调函数时，输入正确的pskId及pskContent，成功更新Psk
     Psk updatePsk;
     auto updateRet = pskMgr.UpdatePsk(outputPsk.GetPskId(), outputPsk.GetPskContent(), updatePsk);
-    EXPECT_EQ(updateRet, PskManagerRC::OK); //基本信息不变，密钥、开始时间、结束时间变更
+    EXPECT_EQ(updateRet, PskManagerRC::OK); // 基本信息不变，密钥、开始时间、结束时间变更
     EXPECT_EQ(outputPsk.GetPskId(), updatePsk.GetPskId());
     EXPECT_EQ(outputPsk.GetIssuer(), updatePsk.GetIssuer());
     EXPECT_EQ(outputPsk.GetSubject(), updatePsk.GetSubject());
@@ -706,12 +703,12 @@ TEST_F(TestCDFPskManager, LoadPskExpectOK)
 
         // 定位到文件头，读取所有字节
         ifs.seekg(0);
-        ifs.read(reinterpret_cast<char*>(read_bytes.data()), size);
+        ifs.read(reinterpret_cast<char *>(read_bytes.data()), size);
         ASSERT_TRUE(ifs.good());
-    }  // ifs 超出作用域自动关闭
-    std::string read_str;  // 单个字符串存储所有字节
+    } // ifs 超出作用域自动关闭
+    std::string read_str; // 单个字符串存储所有字节
     read_str.reserve(read_bytes.size());
-    for (const auto& b : read_bytes) {
+    for (const auto &b : read_bytes) {
         // 每个 byte 转换为 char 后拼接到字符串中
         read_str += static_cast<char>(b);
     }
