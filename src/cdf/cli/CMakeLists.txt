@@ -13,6 +13,11 @@ target_compile_options(crypto_tool PRIVATE -fvisibility=hidden)
 
 target_link_libraries(crypto_tool PUBLIC CDF::cdf Dependency::secure_c)
 
+# Add -pie flag for security (only for executable, not for shared libraries)
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+  target_link_options(crypto_tool PRIVATE -pie)
+endif()
+
 target_include_directories(
   crypto_tool
   PRIVATE ${CMAKE_DEPENDENCY_INCLUDEDIR}

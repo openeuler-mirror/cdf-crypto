@@ -12,12 +12,16 @@ else()
                     DOWNLOAD_COMMAND "")
 endif()
 
+# 过滤掉 -Werror 等会导致 gtest 构建失败的 flags
+string(REPLACE "-Werror" "" GTEST_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+string(REPLACE "-Wmaybe-uninitialized" "" GTEST_CXX_FLAGS "${GTEST_CXX_FLAGS}")
+
 ExternalProject_Add(
   gtest
   ${DOWNLOAD_ARGS}
   PREFIX ${DEPENDENCY_INSTALL_PREFIX_NAME}
   CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_DEPENDENCY_INSTALL_PREFIX}
-             -DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS} -DCMAKE_SKIP_RPATH=True
+             -DCMAKE_CXX_FLAGS=${GTEST_CXX_FLAGS} -DCMAKE_SKIP_RPATH=True
   EXCLUDE_FROM_ALL On
   LOG_DOWNLOAD On
   LOG_CONFIGURE On

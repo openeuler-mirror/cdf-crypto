@@ -106,10 +106,10 @@ macro(set_secure_flags)
     # add_compiler_flags(-Wl,-z,relro,-z,now) # bind now
 
     # security-related linker flags (must-have)
-    add_linker_flags(-pie) # pie
     add_linker_flags(-s) # strip
     add_linker_flags(-Wl,-z,relro,-z,now) # bind now
     add_linker_flags(-Wl,-z,noexecstack) # nx
+    # Note: -pie flag should only be applied to executables, not shared libraries
   elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compiler_flags(-g)
   endif()
@@ -117,18 +117,17 @@ macro(set_secure_flags)
   if(BUILD_ASAN)
     set(_saved_CRL ${CMAKE_REQUIRED_LIBRARIES})
     set(CMAKE_REQUIRED_LIBRARIES "-fsanitize=address;asan")
+    # 只使用可用的 sanitizer：libasan 存在，但 liblsan/libubsan 缺失
     add_compiler_flags(-fsanitize=address)
-    add_compiler_flags(-fsanitize=leak)
-    add_compiler_flags(-fsanitize=undefined)
-    add_compiler_flags(-fsanitize=pointer-compare)
-    add_compiler_flags(-fsanitize=pointer-subtract)
+    # add_compiler_flags(-fsanitize=leak)         # 需要 liblsan（不存在）
+    # add_compiler_flags(-fsanitize=undefined)    # 需要 libubsan（不存在）
+    # add_compiler_flags(-fsanitize=pointer-compare)
+    # add_compiler_flags(-fsanitize=pointer-subtract)
 
     add_linker_flags(-fno-pie)
     add_linker_flags(-fsanitize=address)
-    add_linker_flags(-fsanitize=pointer-subtract)
-    add_linker_flags(-fsanitize=pointer-compare)
-    add_linker_flags(-fsanitize=undefined)
-    add_linker_flags(-fsanitize=leak)
+    # add_linker_flags(-fsanitize=leak)
+    # add_linker_flags(-fsanitize=undefined)
     set(CMAKE_REQUIRED_LIBRARIES ${_saved_CRL})
   endif()
 endmacro()

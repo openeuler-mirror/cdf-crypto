@@ -298,9 +298,8 @@ add_debug_compiler_flags("-g")
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
   # HUAWEI_SECURE_BUILD_FLAGS (LINKER FLAGS)
   add_link_options("-s")
-  if(NOT BUILD_TEST)
-    add_link_options("-pie")
-  endif()
+  # Note: -pie flag should only be applied to executables, not shared libraries
+  # It will be added to crypto_tool specifically in its CMakeLists.txt
 
   # for kmc
   set(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS}")

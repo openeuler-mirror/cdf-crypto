@@ -4,6 +4,10 @@
 
 add_library(cdf_obj OBJECT)
 
+if(BUILD_TEST)
+  target_compile_definitions(cdf_obj PRIVATE CDF_RAND_TESTING)
+endif()
+
 target_include_directories(
   cdf_obj
   PUBLIC
