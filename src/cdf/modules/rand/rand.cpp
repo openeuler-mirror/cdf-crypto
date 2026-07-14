@@ -40,6 +40,7 @@ const uint32_t MIN_SECURE_PWD_LEN = 8;
 const uint32_t MAX_SECURE_PWD_LEN = 32;
 const uint32_t MIN_SEC_STRENGTH = 112;
 const uint32_t MAX_SEC_STRENGTH = 256;
+const uint32_t MAX_GET_RAND_ATTEMPTS = 1000;
 
 const char PWD_ALL_CHARS[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
                              "`~!@#$%^&*()-_=+\\|[]{};:'\" ,<.>/?";
@@ -81,7 +82,7 @@ enum class CharType : uint8_t {
 };
 
 // 内部辅助函数：通过日志记录错误
-void RecordError(const std::string &errorMsg)
+void RecordError([[maybe_unused]] const std::string &errorMsg)
 {
     g_errorCount.fetch_add(1);
     CCSEC_LOG_ERROR("|RandModule|||" << errorMsg);
@@ -129,10 +130,12 @@ struct RandFetchSpec {
     std::string drbgPropq;
 };
 
-const char *CStrOrNull(const std::string &value)
-{
-    return value.empty() ? nullptr : value.c_str();
-}
+struct DrbgParamStorage {
+    std::string cipher;
+    std::string digest;
+    std::string mac;
+    std::string properties;
+};
 
 std::string FormatFetchTarget(const std::string &name, const std::string &propq)
 {
@@ -165,7 +168,7 @@ RandFetchSpec BuildFetchSpec(const RandConfig &config)
 
 bool FetchRandAvailable(const std::string &name, const std::string &propq)
 {
-    EVP_RAND *rand = EVP_RAND_fetch(nullptr, name.c_str(), CStrOrNull(propq));
+    EVP_RAND *rand = EVP_RAND_fetch(nullptr, name.c_str(), propq.empty() ? nullptr : propq.c_str());
     if (rand == nullptr) {
         return false;
     }
@@ -240,37 +243,42 @@ bool ValidateParentRandAvailable(const RandConfig &config)
 }
 
 // 内部辅助函数：构建 DRBG 参数 (strength→cipher/digest 映射)
-bool BuildDrbgParams(const RandConfig &config, const char *propq, OSSL_PARAM *params, size_t &idx)
+bool BuildDrbgParams(const RandConfig &config, const std::string &propq,
+                     DrbgParamStorage &storage, OSSL_PARAM *params, size_t &idx)
 {
     idx = 0;
     if (config.drbgType == "CTR-DRBG") {
-        const char *cipher = nullptr;
         if (config.securityStrength <= 128) {
-            cipher = "AES-128-CTR";
+            storage.cipher = "AES-128-CTR";
         } else if (config.securityStrength <= 192) {
-            cipher = "AES-192-CTR";
+            storage.cipher = "AES-192-CTR";
         } else {
-            cipher = "AES-256-CTR";
+            storage.cipher = "AES-256-CTR";
         }
         params[idx++] = OSSL_PARAM_construct_utf8_string(
-            OSSL_DRBG_PARAM_CIPHER, const_cast<char *>(cipher), 0);
+            OSSL_DRBG_PARAM_CIPHER, storage.cipher.data(), 0);
     } else {
-        const char *digest = nullptr;
         if (config.securityStrength <= 112) {
-            digest = "SHA-224";
+            storage.digest = "SHA-224";
         } else if (config.securityStrength <= 128) {
-            digest = "SHA-256";
+            storage.digest = "SHA-256";
         } else if (config.securityStrength <= 192) {
-            digest = "SHA-384";
+            storage.digest = "SHA-384";
         } else {
-            digest = "SHA-512";
+            storage.digest = "SHA-512";
         }
         params[idx++] = OSSL_PARAM_construct_utf8_string(
-            OSSL_DRBG_PARAM_DIGEST, const_cast<char *>(digest), 0);
+            OSSL_DRBG_PARAM_DIGEST, storage.digest.data(), 0);
+        if (config.drbgType == "HMAC-DRBG") {
+            storage.mac = "HMAC";
+            params[idx++] = OSSL_PARAM_construct_utf8_string(
+                OSSL_DRBG_PARAM_MAC, storage.mac.data(), 0);
+        }
     }
-    if (propq != nullptr && propq[0] != '\0') {
+    storage.properties = propq;
+    if (!storage.properties.empty()) {
         params[idx++] = OSSL_PARAM_construct_utf8_string(
-            OSSL_DRBG_PARAM_PROPERTIES, const_cast<char *>(propq), 0);
+            OSSL_DRBG_PARAM_PROPERTIES, storage.properties.data(), 0);
     }
     params[idx] = OSSL_PARAM_construct_end();
     return true;
@@ -280,11 +288,10 @@ bool BuildDrbgParams(const RandConfig &config, const char *propq, OSSL_PARAM *pa
 bool BuildRandChain(const RandConfig &config)
 {
     const RandFetchSpec fetchSpec = BuildFetchSpec(config);
-    const char *drbgPropq = CStrOrNull(fetchSpec.drbgPropq);
-    const char *parentPropq = CStrOrNull(fetchSpec.parentPropq);
 
     // Step 1: 获取 parent 熵源
-    g_pParent = EVP_RAND_fetch(nullptr, fetchSpec.parentName.c_str(), parentPropq);
+    g_pParent = EVP_RAND_fetch(nullptr, fetchSpec.parentName.c_str(),
+                               fetchSpec.parentPropq.empty() ? nullptr : fetchSpec.parentPropq.c_str());
     if (g_pParent == nullptr) {
         RecordError("EVP_RAND_fetch failed for parent RAND: " +
                     FormatFetchTarget(fetchSpec.parentName, fetchSpec.parentPropq));
@@ -314,8 +321,9 @@ bool BuildRandChain(const RandConfig &config)
 
     // Step 3: 构建 DRBG 算法参数
     OSSL_PARAM params[8];
+    DrbgParamStorage paramStorage;
     size_t paramIdx = 0;
-    if (!BuildDrbgParams(config, drbgPropq, params, paramIdx)) {
+    if (!BuildDrbgParams(config, fetchSpec.drbgPropq, paramStorage, params, paramIdx)) {
         EVP_RAND_CTX_free(g_pParentCtx);
         g_pParentCtx = nullptr;
         EVP_RAND_free(g_pParent);
@@ -324,7 +332,8 @@ bool BuildRandChain(const RandConfig &config)
     }
 
     // Step 4: 获取 DRBG 算法
-    g_pDrbg = EVP_RAND_fetch(nullptr, config.drbgType.c_str(), drbgPropq);
+    g_pDrbg = EVP_RAND_fetch(nullptr, config.drbgType.c_str(),
+                             fetchSpec.drbgPropq.empty() ? nullptr : fetchSpec.drbgPropq.c_str());
     if (g_pDrbg == nullptr) {
         RecordError("EVP_RAND_fetch failed for DRBG: " +
                     FormatFetchTarget(config.drbgType, fetchSpec.drbgPropq));
@@ -500,7 +509,7 @@ CcsecCryptErrorCode GetRand(uint8_t *randBuff, const uint32_t randDataLength)
         return CcsecCryptErrorCode::CCSEC_CRYPT_PARAM_INVALID;
     }
 
-    for (uint32_t attempt = 0; attempt < 1000; ++attempt) {
+    for (uint32_t attempt = 0; attempt < MAX_GET_RAND_ATTEMPTS; ++attempt) {
         if (EnsureRandReady() != CcsecCryptErrorCode::CCSEC_CRYPT_OK) {
             continue;
         }
@@ -533,8 +542,8 @@ CcsecCryptErrorCode GetRand(uint8_t *randBuff, const uint32_t randDataLength)
             unsigned int strength = static_cast<unsigned int>(g_activeConfig.securityStrength);
             int prFlag = g_activeConfig.predictionResistance ? 1 : 0;
             int ret = EVP_RAND_generate(g_pRandCtx, randBuff,
-                                         static_cast<size_t>(randDataLength),
-                                         strength, prFlag, nullptr, 0);
+                                        static_cast<size_t>(randDataLength),
+                                        strength, prFlag, nullptr, 0);
             if (ret != 1) {
                 RecordError("EVP_RAND_generate failed");
                 CCSEC_LOG_ERROR("|GetRand|END|returnF||EVP_RAND_generate failed");

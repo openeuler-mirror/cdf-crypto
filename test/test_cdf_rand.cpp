@@ -11,18 +11,18 @@
  * See the Mulan PSL v2 for more details.
  */
 
-#include "gtest/gtest.h"
-#include "securec.h"
-#include "test_utils.h"
-#include "openssl/evp.h"
-#include "openssl/provider.h"
-#include "openssl/rand.h"
 #include <atomic>
 #include <chrono>
 #include <cstring>
 #include <future>
 #include <thread>
 #include <vector>
+#include "gtest/gtest.h"
+#include "openssl/evp.h"
+#include "openssl/rand.h"
+#include "openssl/provider.h"
+#include "securec.h"
+#include "test_utils.h"
 
 #include "cdf/modules/rand/rand.h"
 
@@ -89,8 +89,20 @@ TEST_F(TestCDFRand, GetSecurePwd_InvalidParams)
 }
 
 // ========== 自动初始化测试 ==========
+class RandTest : public ::testing::Test {
+protected:
+    void SetUp() override
+    {
+        EXPECT_TRUE(Logger::Instance()->SetExternalLogFunction(SetExternalLogCallBack));
+    }
 
-TEST(RandTest, AutoInit_OnFirstCall)
+    void TearDown() override
+    {
+        // Perform any necessary cleanup for the test cases
+    }
+};
+
+TEST_F(RandTest, AutoInit_OnFirstCall)
 {
     RandDeinit();  // 确保未初始化状态
 
@@ -102,16 +114,19 @@ TEST(RandTest, AutoInit_OnFirstCall)
     // 验证生成的随机数非全零
     bool allZero = true;
     for (int i = 0; i < 32; i++) {
-        if (buf[i] != 0) allZero = false;
+        if (buf[i] != 0) {
+            allZero = false;
+        }
     }
     EXPECT_FALSE(allZero);
 }
 
-TEST(RandTest, AutoInit_MultipleCalls)
+TEST_F(RandTest, AutoInit_MultipleCalls)
 {
     RandDeinit();
 
-    uint8_t buf1[16], buf2[16];
+    uint8_t buf1[16];
+    uint8_t buf2[16];
 
     CcsecCryptErrorCode rc1 = GetRand(buf1, 16);
     CcsecCryptErrorCode rc2 = GetRand(buf2, 16);
@@ -122,7 +137,7 @@ TEST(RandTest, AutoInit_MultipleCalls)
 
 // ========== 配置初始化测试 ==========
 
-TEST(RandTest, Init_DefaultConfig_Success)
+TEST_F(RandTest, Init_DefaultConfig_Success)
 {
     RandDeinit();
 
@@ -136,7 +151,7 @@ TEST(RandTest, Init_DefaultConfig_Success)
     EXPECT_TRUE(status.isHealthy);
 }
 
-TEST(RandTest, Init_RepeatedInit_Idempotent)
+TEST_F(RandTest, Init_RepeatedInit_Idempotent)
 {
     RandDeinit();
 
@@ -149,7 +164,7 @@ TEST(RandTest, Init_RepeatedInit_Idempotent)
     EXPECT_EQ(rc2, CcsecCryptErrorCode::CCSEC_CRYPT_OK);
 }
 
-TEST(RandTest, Init_InvalidDrbgType_ReturnsWithoutBlocking)
+TEST_F(RandTest, Init_InvalidDrbgType_ReturnsWithoutBlocking)
 {
     RandDeinit();
 
@@ -166,7 +181,7 @@ TEST(RandTest, Init_InvalidDrbgType_ReturnsWithoutBlocking)
     EXPECT_EQ(resultFuture.get(), CcsecCryptErrorCode::CCSEC_CRYPT_PARAM_INVALID);
 }
 
-TEST(RandTest, Init_UnsupportedCustomSeedSource_Fails)
+TEST_F(RandTest, Init_UnsupportedCustomSeedSource_Fails)
 {
     RandDeinit();
 
@@ -177,7 +192,7 @@ TEST(RandTest, Init_UnsupportedCustomSeedSource_Fails)
     EXPECT_EQ(RandInit(config), CcsecCryptErrorCode::CCSEC_CRYPT_ERROR);
 }
 
-TEST(RandTest, Init_CustomSeedSourceDefaultProvider_Success)
+TEST_F(RandTest, Init_CustomSeedSourceDefaultProvider_Success)
 {
     RandDeinit();
 
@@ -191,7 +206,7 @@ TEST(RandTest, Init_CustomSeedSourceDefaultProvider_Success)
     RandDeinit();
 }
 
-TEST(RandTest, Init_HardwareSeedSourceRequiresAvailableJitterProvider)
+TEST_F(RandTest, Init_HardwareSeedSourceRequiresAvailableJitterProvider)
 {
     RandDeinit();
 
@@ -211,7 +226,7 @@ TEST(RandTest, Init_HardwareSeedSourceRequiresAvailableJitterProvider)
     RandDeinit();
 }
 
-TEST(RandTest, Init_ConfiguredDrbgTypes_GenerateRandom)
+TEST_F(RandTest, Init_ConfiguredDrbgTypes_GenerateRandom)
 {
     const char *drbgTypes[] = {"CTR-DRBG", "HASH-DRBG", "HMAC-DRBG"};
     for (const char *drbgType : drbgTypes) {
@@ -233,7 +248,7 @@ TEST(RandTest, Init_ConfiguredDrbgTypes_GenerateRandom)
     RandDeinit();
 }
 
-TEST(RandTest, Init_FipsModeRequiresFipsProvider)
+TEST_F(RandTest, Init_FipsModeRequiresFipsProvider)
 {
     RandDeinit();
 
@@ -259,7 +274,7 @@ TEST(RandTest, Init_FipsModeRequiresFipsProvider)
     RandDeinit();
 }
 
-TEST(RandTest, ConcurrentGetRandAndDeinit_NoCrashOrBlock)
+TEST_F(RandTest, ConcurrentGetRandAndDeinit_NoCrashOrBlock)
 {
     RandDeinit();
     RandConfig config;
@@ -299,7 +314,7 @@ TEST(RandTest, ConcurrentGetRandAndDeinit_NoCrashOrBlock)
 
 // ========== 健康状态测试 ==========
 
-TEST(RandTest, HealthStatus_AfterInit_Healthy)
+TEST_F(RandTest, HealthStatus_AfterInit_Healthy)
 {
     RandDeinit();
     RandInit();
@@ -313,7 +328,7 @@ TEST(RandTest, HealthStatus_AfterInit_Healthy)
     EXPECT_EQ(status.errorCount, 0U);
 }
 
-TEST(RandTest, HealthStatus_NotInit_Unhealthy)
+TEST_F(RandTest, HealthStatus_NotInit_Unhealthy)
 {
     RandDeinit();
 
@@ -325,7 +340,7 @@ TEST(RandTest, HealthStatus_NotInit_Unhealthy)
 
 // ========== 参数校验测试 ==========
 
-TEST(RandTest, GetRand_NullBuffer_Fail)
+TEST_F(RandTest, GetRand_NullBuffer_Fail)
 {
     RandDeinit();
     RandInit();
@@ -334,7 +349,7 @@ TEST(RandTest, GetRand_NullBuffer_Fail)
     EXPECT_EQ(rc, CcsecCryptErrorCode::CCSEC_CRYPT_PARAM_INVALID);
 }
 
-TEST(RandTest, GetRand_ZeroLength_Fail)
+TEST_F(RandTest, GetRand_ZeroLength_Fail)
 {
     RandDeinit();
     RandInit();
@@ -344,7 +359,7 @@ TEST(RandTest, GetRand_ZeroLength_Fail)
     EXPECT_EQ(rc, CcsecCryptErrorCode::CCSEC_CRYPT_PARAM_INVALID);
 }
 
-TEST(RandTest, GetRand_ExceedMaxLength_Fail)
+TEST_F(RandTest, GetRand_ExceedMaxLength_Fail)
 {
     RandDeinit();
     RandInit();
@@ -354,7 +369,7 @@ TEST(RandTest, GetRand_ExceedMaxLength_Fail)
     EXPECT_EQ(rc, CcsecCryptErrorCode::CCSEC_CRYPT_PARAM_INVALID);
 }
 
-TEST(RandTest, GetRand_MinLength_Success)
+TEST_F(RandTest, GetRand_MinLength_Success)
 {
     RandDeinit();
     RandInit();
@@ -364,7 +379,7 @@ TEST(RandTest, GetRand_MinLength_Success)
     EXPECT_EQ(rc, CcsecCryptErrorCode::CCSEC_CRYPT_OK);
 }
 
-TEST(RandTest, GetRand_MaxLength_Success)
+TEST_F(RandTest, GetRand_MaxLength_Success)
 {
     RandDeinit();
     RandInit();
@@ -376,7 +391,7 @@ TEST(RandTest, GetRand_MaxLength_Success)
 
 // ========== 向后兼容测试 ==========
 
-TEST(RandTest, BackwardCompat_ManualInit_Success)
+TEST_F(RandTest, BackwardCompat_ManualInit_Success)
 {
     RandDeinit();
 
@@ -392,7 +407,7 @@ TEST(RandTest, BackwardCompat_ManualInit_Success)
 
 // ========== 周期性健康检查测试 ==========
 
-TEST(RandTest, HealthCheckInterval_PeriodicCheck_Enabled)
+TEST_F(RandTest, HealthCheckInterval_PeriodicCheck_Enabled)
 {
     RandDeinit();
 
@@ -428,7 +443,7 @@ TEST(RandTest, HealthCheckInterval_PeriodicCheck_Enabled)
     RandDeinit();
 }
 
-TEST(RandTest, HealthCheckInterval_DefaultDisabled)
+TEST_F(RandTest, HealthCheckInterval_DefaultDisabled)
 {
     RandDeinit();
 
@@ -456,7 +471,7 @@ TEST(RandTest, HealthCheckInterval_DefaultDisabled)
 }
 
 #ifdef CDF_RAND_TESTING
-TEST(RandTest, HealthCheckInterval_SubSecondIntervalTriggersHealthCheck)
+TEST_F(RandTest, HealthCheckInterval_SubSecondIntervalTriggersHealthCheck)
 {
     RandDeinit();
 
@@ -478,7 +493,7 @@ TEST(RandTest, HealthCheckInterval_SubSecondIntervalTriggersHealthCheck)
 #endif
 // ========== 新增测试 (EVP_RAND 迁移) ==========
 
-TEST(RandTest, SecurityStrength_Mapping)
+TEST_F(RandTest, SecurityStrength_Mapping)
 {
     struct TestCase {
         const char *drbg;
@@ -521,14 +536,15 @@ TEST(RandTest, SecurityStrength_Mapping)
     RandDeinit();
 }
 
-TEST(RandTest, PredictionResistance_Enabled)
+TEST_F(RandTest, PredictionResistance_Enabled)
 {
     RandDeinit();
     RandConfig cfg;
     cfg.predictionResistance = true;
     ASSERT_EQ(RandInit(cfg), CcsecCryptErrorCode::CCSEC_CRYPT_OK);
 
-    uint8_t a[64], b[64];
+    uint8_t a[64];
+    uint8_t b[64];
     ASSERT_EQ(GetRand(a, 64), CcsecCryptErrorCode::CCSEC_CRYPT_OK);
     ASSERT_EQ(GetRand(b, 64), CcsecCryptErrorCode::CCSEC_CRYPT_OK);
     EXPECT_NE(memcmp(a, b, 64), 0) << "predictionResistance should produce different output";
@@ -536,7 +552,7 @@ TEST(RandTest, PredictionResistance_Enabled)
     RandDeinit();
 }
 
-TEST(RandTest, Isolation_FromGlobalRAND)
+TEST_F(RandTest, Isolation_FromGlobalRAND)
 {
     RandDeinit();
     ASSERT_EQ(RandInit(), CcsecCryptErrorCode::CCSEC_CRYPT_OK);
@@ -552,7 +568,7 @@ TEST(RandTest, Isolation_FromGlobalRAND)
     RandDeinit();
 }
 
-TEST(RandTest, Deinit_CleansUpProviders)
+TEST_F(RandTest, Deinit_CleansUpProviders)
 {
     RandDeinit();
     ASSERT_EQ(RandInit(), CcsecCryptErrorCode::CCSEC_CRYPT_OK);
@@ -566,7 +582,7 @@ TEST(RandTest, Deinit_CleansUpProviders)
     RandDeinit();
 }
 
-TEST(RandTest, InvalidStrength_Fails)
+TEST_F(RandTest, InvalidStrength_Fails)
 {
     RandDeinit();
     RandConfig cfg;
