@@ -1,3 +1,8 @@
+.dbg
+.worktrees/
+build_noasan
+*.bin
+docs/superpowers
 *.eld
 output
 data/*

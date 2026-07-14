@@ -3068,13 +3068,32 @@ KeyManagerRC请参见对应章节。
 
 **函数定义**
 
-获取随机数接口初始化 全局初始化一次即可
+获取随机数接口初始化，全局初始化一次即可。若未显式调用该接口，首次调用 GetRand 时会使用默认配置自动初始化。
+模块已初始化时，RandInit(config) 直接返回 CCSEC_CRYPT_OK，不会切换已有配置；如需更换配置，请先调用 RandDeinit()。
 
 **实现方法**
 
 ```c++
-CcsecCryptErrorCode RandInit(void);
+CcsecCryptErrorCode RandInit(const RandConfig &config = RandConfig{});
 ```
+
+**参数说明**
+
+| **名称** | 参数类型 | **说明** |
+| -------- | -------- | -------- |
+| config | [IN] | 随机数模块配置。初始化成功后，drbgType、seedSource、securityStrength、predictionResistance、healthCheckInterval 会影响私有 EVP_RAND 实例的创建或生成行为；若模块已初始化，再次调用 RandInit(config) 直接返回成功，不会切换已有配置，需先调用 RandDeinit() 后重新初始化。HARDWARE 使用 JITTER parent，CUSTOM 使用指定 provider 获取 SEED-SRC parent。FIPS 模式使用 fips=yes 属性约束获取 DRBG；非 CUSTOM 熵源在 FIPS 模式下使用带 fips=yes 属性约束的 JITTER parent。seedSource="OS" 不是独立 parent，非 FIPS 模式下仍使用 SEED-SRC parent，并在 DRBG 实例化前调用 RAND_poll() 触发 OpenSSL OS 熵源补充采集。 |
+
+**RandConfig 字段说明**
+
+| 字段 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| drbgType | string | "CTR-DRBG" | DRBG 算法类型，可选 "CTR-DRBG"、"HASH-DRBG"、"HMAC-DRBG"。 |
+| seedSource | string | "SEED-SRC" | 熵源类型，可选 "SEED-SRC"、"OS"、"HARDWARE"、"CUSTOM"；"SEED-SRC" 使用 OpenSSL SEED-SRC parent；"OS" 在非 FIPS 模式下同样使用 SEED-SRC parent，并额外调用 RAND_poll() 触发 OS 熵源补充采集；"HARDWARE" 使用 OpenSSL JITTER RAND 作为 parent；"CUSTOM" 使用 customSeedProvider 指定 provider 中的 SEED-SRC parent。 |
+| fipsMode | bool | false | FIPS 模式开关；启用后先加载 FIPS Provider，并用 fips=yes 属性约束获取 DRBG；seedSource!="CUSTOM" 时 parent 使用带 fips=yes 属性约束的 JITTER。是否可用取决于运行环境是否安装并启用对应 Provider/RAND 实现。 |
+| customSeedProvider | string | "" | 自定义熵源 provider 名称，仅当 seedSource="CUSTOM" 时生效；为空时初始化失败；非 CUSTOM 熵源下该字段不参与 parent 选择。 |
+| securityStrength | uint32_t | 256 | 安全强度，范围 [112,256]；CTR-DRBG 仅支持 128/192/256；HASH-DRBG/HMAC-DRBG 支持 [112,256]，并按区间选择满足强度的摘要算法。 |
+| predictionResistance | bool | false | 预测抵抗；启用后每次生成前重取种。 |
+| healthCheckInterval | uint32_t | 0 | 健康检查间隔(ms)，0 表示禁用。 |
 
 **返回值**
 
@@ -3086,7 +3105,7 @@ CcsecCryptErrorCode RandInit(void);
 
 **函数定义**
 
-获取随机数
+获取随机数。支持自动初始化；若随机数模块尚未初始化，接口会使用默认 RandConfig 自动初始化。
 
 **实现方法**
 
@@ -3111,17 +3130,17 @@ CcsecCryptErrorCode GetRand(uint8_t *randBuff, const uint32_t randDataLength);
 
 **函数定义**
 
-获取随机数接口去初始化 全局去初始化一次即可
+获取随机数接口去初始化，全局去初始化一次即可。
 
 **实现方法**
 
 ```c++
-CcsecCryptErrorCode RandDeinit(void);
+void RandDeinit(void);
 ```
 
 **返回值**
 
-失败返回错误码 成功返回 CCSEC_CRYPT_OK。
+无。
 
 
 
@@ -3134,7 +3153,8 @@ CcsecCryptErrorCode RandDeinit(void);
 **实现方法**
 
 ```c++
-CcsecCryptErrorCode GetSecurePwd(uint8_t *pwdBuff, const uint32_t pwdLength);
+CcsecCryptErrorCode GetSecurePwd(uint8_t *pwdBuff, const uint32_t pwdLength,
+                                 const uint32_t retryTimes = DEFAULT_SECURE_PWD_RETRY_TIMES);
 ```
 
 参数说明
@@ -3143,6 +3163,31 @@ CcsecCryptErrorCode GetSecurePwd(uint8_t *pwdBuff, const uint32_t pwdLength);
 | --------- | -------- | ------------------------------------------------------------ |
 | pwdBuff   | [OUT]    | 安全密码口令指针。申请内存长度应大于等于pwdLength。  说明  生成口令包含如下至少两种字符的组合：  l   至少一个小写字母；  l   至少一个大写字母；  l   至少一个数字；  l   至少一个特殊字符：`~!@#$%^&*()-_=+\\ |
 | pwdLength | [IN]     | 安全密码口令长度，范围: [8, 32]。                            |
+| retryTimes | [IN] | 重试次数，默认 `DEFAULT_SECURE_PWD_RETRY_TIMES`（10次）。未传入时保持原有行为；传入正数时使用指定次数；0为非法参数。 |
+
+**返回值**
+
+失败返回错误码 成功返回 CCSEC_CRYPT_OK。
+
+
+
+### 2.5.5 GetRandHealthStatus
+
+**函数定义**
+
+获取随机数生成器健康状态，包括健康标志、熵充足性、错误计数等信息。错误详情通过日志记录。
+
+**实现方法**
+
+```c++
+CcsecCryptErrorCode GetRandHealthStatus(RandHealthStatus &status);
+```
+
+**参数说明**
+
+| **名称** | 参数类型 | **说明** |
+| -------- | -------- | -------- |
+| status | [OUT] | 健康状态结构体，包含 isHealthy（健康标志）、entropySufficient（熵充足性）、errorCount（错误计数）。 |
 
 **返回值**
 

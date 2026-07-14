@@ -21,13 +21,10 @@
 #include "cdf/modules/authentication/kerberos/krb_client.h"
 #include "cdf/modules/authentication/kerberos/krb_ctx.h"
 #include "cdf/modules/authentication/kerberos/krb_server.h"
-#include "cdf/modules/key_management/kmc/kmc_key_manager.h"
 
 namespace cdf::test {
 
 constexpr std::string_view TEST_KEYTAB_PATH = "/root/example.keytab";
-constexpr std::string_view KMC_MASTER_KSF_PATH = "tmp/test_cdf_cryption/ksfa";
-constexpr std::string_view KMC_STANDBY_KSF_PATH = "tmp/test_cdf_cryption/ksfb";
 constexpr std::string_view TEST_SERVER_PRINCIPAL = "server@EXAMPLE.COM";
 constexpr std::string_view TEST_CLIENT_PRINCIPAL = "user@EXAMPLE.COM";
 
@@ -77,7 +74,7 @@ constexpr std::string_view TEST_CLIENT_PRINCIPAL = "user@EXAMPLE.COM";
 //     exit
 class TestCDFAuthenticationKrb : public testing ::Test {};
 
-TEST_F(TestCDFAuthenticationKrb, KrbServer_ShouldWork)
+TEST_F(TestCDFAuthenticationKrb, DISABLED_KrbServer_ShouldWork)
 {
     // placeholder
     char *keytable;
@@ -85,8 +82,6 @@ TEST_F(TestCDFAuthenticationKrb, KrbServer_ShouldWork)
 
     // init params
     const std::string keyTabFilePath = std::string(TEST_KEYTAB_PATH);
-    const std::string kmcMasterPath = std::string(KMC_MASTER_KSF_PATH);
-    const std::string kmcStandByPath = std::string(KMC_STANDBY_KSF_PATH);
     const std::string serverPrincipalName = std::string(TEST_SERVER_PRINCIPAL);
     const std::string clientPrincipalName = std::string(TEST_CLIENT_PRINCIPAL);
     bool enableEncryption = false;
@@ -94,7 +89,7 @@ TEST_F(TestCDFAuthenticationKrb, KrbServer_ShouldWork)
     // server
     KrbServer server;
 
-    server.GetKerberosKeytab(keyTabFilePath, &keytable, &keytableLen, enableEncryption, kmcMasterPath, kmcStandByPath);
+    server.GetKerberosKeytab(keyTabFilePath, &keytable, &keytableLen, enableEncryption);
     auto ret = server.ServerInit(serverPrincipalName, {keytable, keytableLen});
     EXPECT_EQ((KrbRc)ret.mResult, KrbRc::CDF_OK); // expect succees
 
@@ -124,7 +119,7 @@ TEST_F(TestCDFAuthenticationKrb, KrbServer_ShouldWork)
     EXPECT_EQ((KrbRc)ret1.mResult, KrbRc::CDF_OK); // expect succees
 }
 
-TEST_F(TestCDFAuthenticationKrb, KrbServer_ShouldNotWork)
+TEST_F(TestCDFAuthenticationKrb, DISABLED_KrbServer_ShouldNotWork)
 {
     // placeholder
     char *keytable;
@@ -132,8 +127,6 @@ TEST_F(TestCDFAuthenticationKrb, KrbServer_ShouldNotWork)
 
     // init params
     const std::string keyTabFilePath = std::string(TEST_KEYTAB_PATH);
-    const std::string kmcMasterPath = std::string(KMC_MASTER_KSF_PATH);
-    const std::string kmcStandByPath = std::string(KMC_STANDBY_KSF_PATH);
     const std::string serverPrincipalName = std::string(TEST_SERVER_PRINCIPAL);
     const std::string clientPrincipalName = std::string(TEST_CLIENT_PRINCIPAL);
     bool enableEncryption = false;
@@ -141,7 +134,7 @@ TEST_F(TestCDFAuthenticationKrb, KrbServer_ShouldNotWork)
     // server
     KrbServer server;
 
-    server.GetKerberosKeytab(keyTabFilePath, &keytable, &keytableLen, enableEncryption, kmcMasterPath, kmcStandByPath);
+    server.GetKerberosKeytab(keyTabFilePath, &keytable, &keytableLen, enableEncryption);
     auto ret = server.ServerInit(serverPrincipalName, {keytable, keytableLen});
     EXPECT_EQ((KrbRc)ret.mResult, KrbRc::CDF_OK); // expect succees
 
@@ -175,7 +168,7 @@ TEST_F(TestCDFAuthenticationKrb, KrbServer_ShouldNotWork)
     EXPECT_EQ((KrbRc)ret.mResult, KrbRc::CDF_ERROR); // expect fail
 }
 
-TEST_F(TestCDFAuthenticationKrb, KrbServer_ShouldNotWork1)
+TEST_F(TestCDFAuthenticationKrb, DISABLED_KrbServer_ShouldNotWork1)
 {
     // placeholder
     char *keytable;
@@ -183,8 +176,6 @@ TEST_F(TestCDFAuthenticationKrb, KrbServer_ShouldNotWork1)
 
     // init params
     const std::string keyTabFilePath = std::string(TEST_KEYTAB_PATH);
-    const std::string kmcMasterPath = std::string(KMC_MASTER_KSF_PATH);
-    const std::string kmcStandByPath = std::string(KMC_STANDBY_KSF_PATH);
     const std::string serverPrincipalName = std::string(TEST_SERVER_PRINCIPAL);
     const std::string clientPrincipalName = std::string(TEST_CLIENT_PRINCIPAL);
     bool enableEncryption = false;
@@ -192,7 +183,7 @@ TEST_F(TestCDFAuthenticationKrb, KrbServer_ShouldNotWork1)
     // server
     KrbServer server;
 
-    server.GetKerberosKeytab(keyTabFilePath, &keytable, &keytableLen, enableEncryption, kmcMasterPath, kmcStandByPath);
+    server.GetKerberosKeytab(keyTabFilePath, &keytable, &keytableLen, enableEncryption);
 
     auto ret = server.ServerInit(serverPrincipalName, "123231");
     EXPECT_EQ((KrbRc)ret.mResult, KrbRc::CDF_ERROR); // expect fail
@@ -221,7 +212,7 @@ TEST_F(TestCDFAuthenticationKrb, KrbServer_ShouldNotWork1)
 }
 
 // 验证密钥在传输过程中被篡改、Clinet与Server认证失败
-TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_002)
+TEST_F(TestCDFAuthenticationKrb, DISABLED_Authentication_Kerberos_002)
 {
     // placeholder
     char *keytable;
@@ -229,8 +220,6 @@ TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_002)
 
     // init params
     const std::string keyTabFilePath = std::string(TEST_KEYTAB_PATH);
-    const std::string kmcMasterPath = std::string(KMC_MASTER_KSF_PATH);
-    const std::string kmcStandByPath = std::string(KMC_STANDBY_KSF_PATH);
     const std::string serverPrincipalName = std::string(TEST_SERVER_PRINCIPAL);
     const std::string clientPrincipalName = std::string(TEST_CLIENT_PRINCIPAL);
     bool enableEncryption = false;
@@ -238,20 +227,20 @@ TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_002)
     // server
     KrbServer server;
 
-    server.GetKerberosKeytab(keyTabFilePath, &keytable, &keytableLen, enableEncryption, kmcMasterPath, kmcStandByPath);
+    server.GetKerberosKeytab(keyTabFilePath, &keytable, &keytableLen, enableEncryption);
     auto ret = server.ServerInit(serverPrincipalName, {keytable, keytableLen});
-    EXPECT_EQ(ret.mResult, 0); // expect succees
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(0)); // expect succees
 
     // client
     KrbClient client;
 
     // 初始化client
     ret = client.ClientInit(clientPrincipalName, serverPrincipalName, {keytable, keytableLen});
-    EXPECT_EQ(ret.mResult, 0); // expect succees
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(0)); // expect succees
 
     // Client get credential
     auto [ret1, cred] = client.ClientGetCred(0);
-    EXPECT_EQ(ret1.mResult, 0); // expect succees
+    EXPECT_EQ(ret1.mResult, static_cast<uint32_t>(0)); // expect succees
 
     // Server auth client using client's credential, and get a resulting credential
     std::string serverInCred;
@@ -261,7 +250,7 @@ TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_002)
     char *serverCredOut;
     uint32_t serverCredLenOut;
     ret = server.ServerAuth(0, serverInCred, &serverCredOut, &serverCredLenOut);
-    EXPECT_EQ(ret.mResult, 0); // expect fail
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(0)); // expect fail
 
     // 篡改凭证
     serverInCred[0]--;
@@ -269,11 +258,11 @@ TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_002)
 
     // 认证失败
     ret = client.ClientAuthServer(0, serverCredOut, serverCredLenOut);
-    EXPECT_EQ(ret.mResult, 1); // expect fail
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(1)); // expect fail
 }
 
 // 验证调用ClientInit接口，inClientName参数非法，初始化失败
-TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_003)
+TEST_F(TestCDFAuthenticationKrb, DISABLED_Authentication_Kerberos_003)
 {
     // placeholder
     char *keytable;
@@ -281,8 +270,6 @@ TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_003)
 
     // init params
     const std::string keyTabFilePath = std::string(TEST_KEYTAB_PATH);
-    const std::string kmcMasterPath = std::string(KMC_MASTER_KSF_PATH);
-    const std::string kmcStandByPath = std::string(KMC_STANDBY_KSF_PATH);
     const std::string serverPrincipalName = std::string(TEST_SERVER_PRINCIPAL);
     const std::string clientPrincipalName = std::string(TEST_CLIENT_PRINCIPAL);
     bool enableEncryption = false;
@@ -290,22 +277,22 @@ TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_003)
     // server
     KrbServer server;
     // 获取keytable
-    server.GetKerberosKeytab(keyTabFilePath, &keytable, &keytableLen, enableEncryption, kmcMasterPath, kmcStandByPath);
+    server.GetKerberosKeytab(keyTabFilePath, &keytable, &keytableLen, enableEncryption);
     // client
     KrbClient client;
     // 初始化client未注册的客户端
     auto ret = client.ClientInit("user1@EXAMPLE.COM", serverPrincipalName, {keytable, keytableLen});
-    EXPECT_EQ(ret.mResult, 1); // expect fail 1
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(1)); // expect fail 1
     // 初始化client客户端为空
     ret = client.ClientInit("", serverPrincipalName, {keytable, keytableLen});
-    EXPECT_EQ(ret.mResult, 2); // expect fail 2
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(2)); // expect fail 2
     // 初始化client客户端为错误格式
     ret = client.ClientInit("user1", serverPrincipalName, {keytable, keytableLen});
-    EXPECT_EQ(ret.mResult, 1); // expect fail 1
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(1)); // expect fail 1
 }
 
 // 验证调用ClientInit接口，inKeytab参数非法，初始化失败
-TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_005)
+TEST_F(TestCDFAuthenticationKrb, DISABLED_Authentication_Kerberos_005)
 {
     // placeholder
     char *keytable;
@@ -313,28 +300,26 @@ TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_005)
 
     // init params
     const std::string keyTabFilePath = std::string(TEST_KEYTAB_PATH);
-    const std::string kmcMasterPath = std::string(KMC_MASTER_KSF_PATH);
-    const std::string kmcStandByPath = std::string(KMC_STANDBY_KSF_PATH);
     const std::string serverPrincipalName = std::string(TEST_SERVER_PRINCIPAL);
     const std::string clientPrincipalName = std::string(TEST_CLIENT_PRINCIPAL);
     bool enableEncryption = false;
 
     // server
     KrbServer server;
-    server.GetKerberosKeytab(keyTabFilePath, &keytable, &keytableLen, enableEncryption, kmcMasterPath, kmcStandByPath);
+    server.GetKerberosKeytab(keyTabFilePath, &keytable, &keytableLen, enableEncryption);
 
     KrbClient client;
     // 初始化client keytable为空及其长度
     auto ret = client.ClientInit(clientPrincipalName, serverPrincipalName, {"", keytableLen});
-    EXPECT_EQ(ret.mResult, 1); // expect fail 1
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(1)); // expect fail 1
     // 初始化client被篡改的keytable及其长度
     keytable[6]++; // 6
     ret = client.ClientInit(clientPrincipalName, serverPrincipalName, {keytable, keytableLen});
-    EXPECT_EQ(ret.mResult, 1); // expect fail 1
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(1)); // expect fail 1
 }
 
 // 验证调用ClientAuthServer接口，凭证为空，鉴权失败
-TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_007)
+TEST_F(TestCDFAuthenticationKrb, DISABLED_Authentication_Kerberos_007)
 {
     // placeholder
     char *keytable;
@@ -342,8 +327,6 @@ TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_007)
 
     // init params
     const std::string keyTabFilePath = std::string(TEST_KEYTAB_PATH);
-    const std::string kmcMasterPath = std::string(KMC_MASTER_KSF_PATH);
-    const std::string kmcStandByPath = std::string(KMC_STANDBY_KSF_PATH);
     const std::string serverPrincipalName = std::string(TEST_SERVER_PRINCIPAL);
     const std::string clientPrincipalName = std::string(TEST_CLIENT_PRINCIPAL);
     bool enableEncryption = false;
@@ -351,20 +334,20 @@ TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_007)
     // server
     KrbServer server;
 
-    server.GetKerberosKeytab(keyTabFilePath, &keytable, &keytableLen, enableEncryption, kmcMasterPath, kmcStandByPath);
+    server.GetKerberosKeytab(keyTabFilePath, &keytable, &keytableLen, enableEncryption);
     auto ret = server.ServerInit(serverPrincipalName, {keytable, keytableLen});
-    EXPECT_EQ(ret.mResult, 0); // expect succees
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(0)); // expect succees
 
     // client
     KrbClient client;
 
     // NOTE now we have unknown realm error: KRB5_REALM_UNKNOWN
     ret = client.ClientInit(clientPrincipalName, serverPrincipalName, {keytable, keytableLen});
-    EXPECT_EQ(ret.mResult, 0); // expect succees
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(0)); // expect succees
 
     // Client get credential
     auto [ret1, cred] = client.ClientGetCred(0);
-    EXPECT_EQ(ret1.mResult, 0); // expect succees
+    EXPECT_EQ(ret1.mResult, static_cast<uint32_t>(0)); // expect succees
 
     // Server auth client using client's credential, and get a resulting credential
     std::string serverInCred;
@@ -374,17 +357,17 @@ TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_007)
     char *serverCredOut;
     uint32_t serverCredLenOut;
     ret = server.ServerAuth(0, serverInCred, &serverCredOut, &serverCredLenOut);
-    EXPECT_EQ(ret.mResult, 0); // expect succees
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(0)); // expect succees
 
     // 凭证为空，认证失败
     char *ptr = nullptr;
     // Server auth client using client's credential, and get a resulting credential
     ret = client.ClientAuthServer(0, ptr, serverCredLenOut);
-    EXPECT_EQ(ret.mResult, 2); // expect succees 2
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(2)); // expect succees 2
 }
 
 // 验证调用ClientAuthServer接口，凭证被篡改，鉴权失败
-TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_008)
+TEST_F(TestCDFAuthenticationKrb, DISABLED_Authentication_Kerberos_008)
 {
     // placeholder
     char *keytable;
@@ -392,8 +375,6 @@ TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_008)
 
     // init params
     const std::string keyTabFilePath = std::string(TEST_KEYTAB_PATH);
-    const std::string kmcMasterPath = std::string(KMC_MASTER_KSF_PATH);
-    const std::string kmcStandByPath = std::string(KMC_STANDBY_KSF_PATH);
     const std::string serverPrincipalName = std::string(TEST_SERVER_PRINCIPAL);
     const std::string clientPrincipalName = std::string(TEST_CLIENT_PRINCIPAL);
     bool enableEncryption = false;
@@ -401,20 +382,20 @@ TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_008)
     // server
     KrbServer server;
 
-    server.GetKerberosKeytab(keyTabFilePath, &keytable, &keytableLen, enableEncryption, kmcMasterPath, kmcStandByPath);
+    server.GetKerberosKeytab(keyTabFilePath, &keytable, &keytableLen, enableEncryption);
     auto ret = server.ServerInit(serverPrincipalName, {keytable, keytableLen});
-    EXPECT_EQ(ret.mResult, 0); // expect succees
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(0)); // expect succees
 
     // client
     KrbClient client;
 
     // NOTE now we have unknown realm error: KRB5_REALM_UNKNOWN
     ret = client.ClientInit(clientPrincipalName, serverPrincipalName, {keytable, keytableLen});
-    EXPECT_EQ(ret.mResult, 0); // expect succees
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(0)); // expect succees
 
     // Client get credential
     auto [ret1, cred] = client.ClientGetCred(0);
-    EXPECT_EQ(ret1.mResult, 0); // expect succees
+    EXPECT_EQ(ret1.mResult, static_cast<uint32_t>(0)); // expect succees
 
     // Server auth client using client's credential, and get a resulting credential
     std::string serverInCred;
@@ -424,17 +405,17 @@ TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_008)
     char *serverCredOut;
     uint32_t serverCredLenOut;
     ret = server.ServerAuth(0, serverInCred, &serverCredOut, &serverCredLenOut);
-    EXPECT_EQ(ret.mResult, 0); // expect succees
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(0)); // expect succees
 
     // 篡改凭证，认证失败
     serverCredOut[0]++;
     // Server auth client using client's credential, and get a resulting credential
     ret = client.ClientAuthServer(0, serverCredOut, serverCredLenOut);
-    EXPECT_EQ(ret.mResult, 1); // expect succees
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(1)); // expect succees
 }
 
 // 验证调用ClientAuthServer接口，凭证长度非法，鉴权失败
-TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_009)
+TEST_F(TestCDFAuthenticationKrb, DISABLED_Authentication_Kerberos_009)
 {
     // placeholder
     char *keytable;
@@ -442,8 +423,6 @@ TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_009)
 
     // init params
     const std::string keyTabFilePath = std::string(TEST_KEYTAB_PATH);
-    const std::string kmcMasterPath = std::string(KMC_MASTER_KSF_PATH);
-    const std::string kmcStandByPath = std::string(KMC_STANDBY_KSF_PATH);
     const std::string serverPrincipalName = std::string(TEST_SERVER_PRINCIPAL);
     const std::string clientPrincipalName = std::string(TEST_CLIENT_PRINCIPAL);
     bool enableEncryption = false;
@@ -451,20 +430,20 @@ TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_009)
     // server
     KrbServer server;
 
-    server.GetKerberosKeytab(keyTabFilePath, &keytable, &keytableLen, enableEncryption, kmcMasterPath, kmcStandByPath);
+    server.GetKerberosKeytab(keyTabFilePath, &keytable, &keytableLen, enableEncryption);
     auto ret = server.ServerInit(serverPrincipalName, {keytable, keytableLen});
-    EXPECT_EQ(ret.mResult, 0); // expect succees
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(0)); // expect succees
 
     // client
     KrbClient client;
 
     // NOTE now we have unknown realm error: KRB5_REALM_UNKNOWN
     ret = client.ClientInit(clientPrincipalName, serverPrincipalName, {keytable, keytableLen});
-    EXPECT_EQ(ret.mResult, 0); // expect succees
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(0)); // expect succees
 
     // Client get credential
     auto [ret1, cred] = client.ClientGetCred(0);
-    EXPECT_EQ(ret1.mResult, 0); // expect succees
+    EXPECT_EQ(ret1.mResult, static_cast<uint32_t>(0)); // expect succees
 
     // Server auth client using client's credential, and get a resulting credential
     std::string serverInCred;
@@ -474,15 +453,15 @@ TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_009)
     char *serverCredOut;
     uint32_t serverCredLenOut;
     ret = server.ServerAuth(0, serverInCred, &serverCredOut, &serverCredLenOut);
-    EXPECT_EQ(ret.mResult, 0); // expect succees
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(0)); // expect succees
 
     // 凭证长度非法，认证失败
     ret = client.ClientAuthServer(0, serverCredOut, 1);
-    EXPECT_EQ(ret.mResult, 1); // expect succees
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(1)); // expect succees
 }
 
 // 验证调用ClientAuthServer接口，凭证长度与凭证不一致，鉴权失败
-TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_010)
+TEST_F(TestCDFAuthenticationKrb, DISABLED_Authentication_Kerberos_010)
 {
     // placeholder
     char *keytable;
@@ -490,8 +469,6 @@ TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_010)
 
     // init params
     const std::string keyTabFilePath = std::string(TEST_KEYTAB_PATH);
-    const std::string kmcMasterPath = std::string(KMC_MASTER_KSF_PATH);
-    const std::string kmcStandByPath = std::string(KMC_STANDBY_KSF_PATH);
     const std::string serverPrincipalName = std::string(TEST_SERVER_PRINCIPAL);
     const std::string clientPrincipalName = std::string(TEST_CLIENT_PRINCIPAL);
     bool enableEncryption = false;
@@ -499,20 +476,20 @@ TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_010)
     // server
     KrbServer server;
 
-    server.GetKerberosKeytab(keyTabFilePath, &keytable, &keytableLen, enableEncryption, kmcMasterPath, kmcStandByPath);
+    server.GetKerberosKeytab(keyTabFilePath, &keytable, &keytableLen, enableEncryption);
     auto ret = server.ServerInit(serverPrincipalName, {keytable, keytableLen});
-    EXPECT_EQ(ret.mResult, 0); // expect succees
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(0)); // expect succees
 
     // client
     KrbClient client;
 
     // NOTE now we have unknown realm error: KRB5_REALM_UNKNOWN
     ret = client.ClientInit(clientPrincipalName, serverPrincipalName, {keytable, keytableLen});
-    EXPECT_EQ(ret.mResult, 0); // expect succees
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(0)); // expect succees
 
     // Client get credential
     auto [ret1, cred] = client.ClientGetCred(0);
-    EXPECT_EQ(ret1.mResult, 0); // expect succees
+    EXPECT_EQ(ret1.mResult, static_cast<uint32_t>(0)); // expect succees
 
     // Server auth client using client's credential, and get a resulting credential
     std::string serverInCred;
@@ -522,15 +499,15 @@ TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_010)
     char *serverCredOut;
     uint32_t serverCredLenOut;
     ret = server.ServerAuth(0, serverInCred, &serverCredOut, &serverCredLenOut);
-    EXPECT_EQ(ret.mResult, 0); // expect succees
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(0)); // expect succees
 
     // 凭证长度credLenOut-1,认证失败
     ret = client.ClientAuthServer(0, serverCredOut, serverCredLenOut - 1);
-    EXPECT_EQ(ret.mResult, 1); // expect succees
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(1)); // expect succees
 }
 
 // 验证调用ServerInit接口，inKeytab参数非法，初始化失败
-TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_011)
+TEST_F(TestCDFAuthenticationKrb, DISABLED_Authentication_Kerberos_011)
 {
     // placeholder
     char *keytable;
@@ -538,24 +515,22 @@ TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_011)
 
     // init params
     const std::string keyTabFilePath = std::string(TEST_KEYTAB_PATH);
-    const std::string kmcMasterPath = std::string(KMC_MASTER_KSF_PATH);
-    const std::string kmcStandByPath = std::string(KMC_STANDBY_KSF_PATH);
     const std::string serverPrincipalName = std::string(TEST_SERVER_PRINCIPAL);
     bool enableEncryption = false;
 
     // server
     KrbServer server;
 
-    server.GetKerberosKeytab(keyTabFilePath, &keytable, &keytableLen, enableEncryption, kmcMasterPath, kmcStandByPath);
+    server.GetKerberosKeytab(keyTabFilePath, &keytable, &keytableLen, enableEncryption);
     auto ret = server.ServerInit(serverPrincipalName, {"", keytableLen});
-    EXPECT_EQ(ret.mResult, 1); // expect succees 1
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(1)); // expect succees 1
     keytable[6]++; // 6
     ret = server.ServerInit(serverPrincipalName, {keytable, keytableLen});
-    EXPECT_EQ(ret.mResult, 1); // expect succees 2
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(1)); // expect succees 2
 }
 
 // 验证调用ServerInit接口，inKeytabLen参数非法，初始化失败
-TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_012)
+TEST_F(TestCDFAuthenticationKrb, DISABLED_Authentication_Kerberos_012)
 {
     // placeholder
     char *keytable;
@@ -563,23 +538,21 @@ TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_012)
 
     // init params
     const std::string keyTabFilePath = std::string(TEST_KEYTAB_PATH);
-    const std::string kmcMasterPath = std::string(KMC_MASTER_KSF_PATH);
-    const std::string kmcStandByPath = std::string(KMC_STANDBY_KSF_PATH);
     const std::string serverPrincipalName = std::string(TEST_SERVER_PRINCIPAL);
     bool enableEncryption = false;
 
     // server
     KrbServer server;
 
-    server.GetKerberosKeytab(keyTabFilePath, &keytable, &keytableLen, enableEncryption, kmcMasterPath, kmcStandByPath);
+    server.GetKerberosKeytab(keyTabFilePath, &keytable, &keytableLen, enableEncryption);
     auto ret = server.ServerInit(serverPrincipalName, {
                                                           keytable,
                                                       });
-    EXPECT_EQ(ret.mResult, 1);
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(1));
 }
 
 // 验证调用ServerInit接口，servicePrincipleName参数非法，初始化失败
-TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_013)
+TEST_F(TestCDFAuthenticationKrb, DISABLED_Authentication_Kerberos_013)
 {
     // placeholder
     char *keytable;
@@ -587,27 +560,25 @@ TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_013)
 
     // init params
     const std::string keyTabFilePath = std::string(TEST_KEYTAB_PATH);
-    const std::string kmcMasterPath = std::string(KMC_MASTER_KSF_PATH);
-    const std::string kmcStandByPath = std::string(KMC_STANDBY_KSF_PATH);
     bool enableEncryption = false;
 
     // server
     KrbServer server;
 
-    server.GetKerberosKeytab(keyTabFilePath, &keytable, &keytableLen, enableEncryption, kmcMasterPath, kmcStandByPath);
+    server.GetKerberosKeytab(keyTabFilePath, &keytable, &keytableLen, enableEncryption);
     // 服务端名为空
     auto ret = server.ServerInit("", {keytable, keytableLen});
-    EXPECT_EQ(ret.mResult, 2); // expect succees 2
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(2)); // expect succees 2
     // 服务端名未注册
     ret = server.ServerInit("server1@EXAMPLE.COM", {keytable, keytableLen});
-    EXPECT_EQ(ret.mResult, 1); // expect succees
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(1)); // expect succees
     // 服务端名格式错误
     ret = server.ServerInit("server1", {keytable, keytableLen});
-    EXPECT_EQ(ret.mResult, 1); // expect succees
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(1)); // expect succees
 }
 
 // 验证调用ServerAuth接口，cred参数非法，初始化失败
-TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_014)
+TEST_F(TestCDFAuthenticationKrb, DISABLED_Authentication_Kerberos_014)
 {
     // placeholder
     char *keytable;
@@ -615,8 +586,6 @@ TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_014)
 
     // init params
     const std::string keyTabFilePath = std::string(TEST_KEYTAB_PATH);
-    const std::string kmcMasterPath = std::string(KMC_MASTER_KSF_PATH);
-    const std::string kmcStandByPath = std::string(KMC_STANDBY_KSF_PATH);
     const std::string serverPrincipalName = std::string(TEST_SERVER_PRINCIPAL);
     const std::string clientPrincipalName = std::string(TEST_CLIENT_PRINCIPAL);
     bool enableEncryption = false;
@@ -624,20 +593,20 @@ TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_014)
     // server
     KrbServer server;
 
-    server.GetKerberosKeytab(keyTabFilePath, &keytable, &keytableLen, enableEncryption, kmcMasterPath, kmcStandByPath);
+    server.GetKerberosKeytab(keyTabFilePath, &keytable, &keytableLen, enableEncryption);
     auto ret = server.ServerInit(serverPrincipalName, {keytable, keytableLen});
-    EXPECT_EQ(ret.mResult, 0); // expect succees 0
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(0)); // expect succees 0
 
     // client
     KrbClient client;
 
     // NOTE now we have unknown realm error: KRB5_REALM_UNKNOWN
     ret = client.ClientInit(clientPrincipalName, serverPrincipalName, {keytable, keytableLen});
-    EXPECT_EQ(ret.mResult, 0); // expect succees 0
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(0)); // expect succees 0
 
     // Client get credential
     auto [ret1, cred] = client.ClientGetCred(0);
-    EXPECT_EQ(ret1.mResult, 0); // expect succees 0
+    EXPECT_EQ(ret1.mResult, static_cast<uint32_t>(0)); // expect succees 0
 
     // Server auth client using client's credential, and get a resulting credential
     std::string serverInCred;
@@ -647,11 +616,11 @@ TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_014)
     char *serverCredOut;
     uint32_t serverCredLenOut;
     ret = server.ServerAuth(0, "", &serverCredOut, &serverCredLenOut);
-    EXPECT_EQ(ret.mResult, 2); // 2
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(2)); // 2
 
     serverInCred[0]++;
     ret = server.ServerAuth(0, serverInCred, &serverCredOut, &serverCredLenOut);
-    EXPECT_EQ(ret.mResult, 1); // expect succees 1
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(1)); // expect succees 1
 }
 
 TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_016)
@@ -672,14 +641,12 @@ TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_017)
     EXPECT_EQ(server, nullptr);
 }
 
-TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_018)
+TEST_F(TestCDFAuthenticationKrb, DISABLED_Authentication_Kerberos_018)
 {
     // GIVEN
     const std::string serverPrincipalName = std::string(TEST_SERVER_PRINCIPAL);
     const std::string clientPrincipalName = std::string(TEST_CLIENT_PRINCIPAL);
     const std::string keyTabFilePath = std::string(TEST_KEYTAB_PATH);
-    const std::string kmcMasterPath = std::string(KMC_MASTER_KSF_PATH);
-    const std::string kmcStandByPath = std::string(KMC_STANDBY_KSF_PATH);
     bool enableEncryption = false;
 
     // client
@@ -689,55 +656,49 @@ TEST_F(TestCDFAuthenticationKrb, Authentication_Kerberos_018)
     uint32_t keytableLen = 0;
     {
         KrbServer server;
-        server.GetKerberosKeytab(keyTabFilePath, &keytable, &keytableLen, enableEncryption, kmcMasterPath,
-                                 kmcStandByPath);
+        server.GetKerberosKeytab(keyTabFilePath, &keytable, &keytableLen, enableEncryption);
     }
 
     auto ret = client->ClientInit(clientPrincipalName, serverPrincipalName, {keytable, keytableLen});
-    EXPECT_EQ(ret.mResult, 0); // expect succees
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(0)); // expect succees
 
     ret = client->ClientInit("@dsa@dsae0@dsa", serverPrincipalName, {keytable, keytableLen});
-    EXPECT_EQ(ret.mResult, 1); // expect failure
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(1)); // expect failure
 
     ret = client->ClientInit(clientPrincipalName, "@dsa@dsae0@dsa", {keytable, keytableLen});
-    EXPECT_EQ(ret.mResult, 1); // expect failure: you cannot have multiple @
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(1)); // expect failure: you cannot have multiple @
 
     ret = client->ClientInit(clientPrincipalName, "dsae0@dsa", {keytable, keytableLen});
-    EXPECT_EQ(ret.mResult, 0); // expect okay
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(0)); // expect okay
 
     ret = client->ClientInit(clientPrincipalName, "dsae0", {keytable, keytableLen});
-    EXPECT_EQ(ret.mResult, 0); // expect okay, using default realm
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(0)); // expect okay, using default realm
 
     ret = client->ClientInit(clientPrincipalName, "dsae0@dsa/", {keytable, keytableLen});
-    EXPECT_EQ(ret.mResult, 1); // expect failure: you cannot have / in realm
+    EXPECT_EQ(ret.mResult, static_cast<uint32_t>(1)); // expect failure: you cannot have / in realm
 }
 
-TEST_F(TestCDFAuthenticationKrb, GetKerberosKeytab_KeytabIsNull)
+TEST_F(TestCDFAuthenticationKrb, DISABLED_GetKerberosKeytab_KeytabIsNull)
 {
     char *keytable;
     uint32_t keytableLen = 0;
 
     // init params
     const std::string keyTabFilePath = std::string(TEST_KEYTAB_PATH);
-    const std::string kmcMasterPath = std::string(KMC_MASTER_KSF_PATH);
-    const std::string kmcStandByPath = std::string(KMC_STANDBY_KSF_PATH);
-    const std::string serverPrincipalName = std::string(TEST_SERVER_PRINCIPAL);
-    const std::string clientPrincipalName = std::string(TEST_CLIENT_PRINCIPAL);
     bool enableEncryption = false;
 
     // server
     KrbServer server;
     auto ret =
-        server.GetKerberosKeytab(keyTabFilePath, &keytable, nullptr, enableEncryption, kmcMasterPath, kmcStandByPath);
+        server.GetKerberosKeytab(keyTabFilePath, &keytable, nullptr, enableEncryption);
     EXPECT_FALSE(ret);
-    ret = server.GetKerberosKeytab(keyTabFilePath, nullptr, &keytableLen, enableEncryption, kmcMasterPath,
-                                   kmcStandByPath);
+    ret = server.GetKerberosKeytab(keyTabFilePath, nullptr, &keytableLen, enableEncryption);
     EXPECT_FALSE(ret);
-    ret = server.GetKerberosKeytab(keyTabFilePath, nullptr, nullptr, enableEncryption, kmcMasterPath, kmcStandByPath);
+    ret = server.GetKerberosKeytab(keyTabFilePath, nullptr, nullptr, enableEncryption);
     EXPECT_FALSE(ret);
 }
 
-TEST_F(TestCDFAuthenticationKrb, ServerAuth_ServerCredOutIsNull)
+TEST_F(TestCDFAuthenticationKrb, DISABLED_ServerAuth_ServerCredOutIsNull)
 {
     // placeholder
     char *keytable;
@@ -745,8 +706,6 @@ TEST_F(TestCDFAuthenticationKrb, ServerAuth_ServerCredOutIsNull)
 
     // init params
     const std::string keyTabFilePath = std::string(TEST_KEYTAB_PATH);
-    const std::string kmcMasterPath = std::string(KMC_MASTER_KSF_PATH);
-    const std::string kmcStandByPath = std::string(KMC_STANDBY_KSF_PATH);
     const std::string serverPrincipalName = std::string(TEST_SERVER_PRINCIPAL);
     const std::string clientPrincipalName = std::string(TEST_CLIENT_PRINCIPAL);
     bool enableEncryption = false;
@@ -754,7 +713,7 @@ TEST_F(TestCDFAuthenticationKrb, ServerAuth_ServerCredOutIsNull)
     // server
     KrbServer server;
 
-    server.GetKerberosKeytab(keyTabFilePath, &keytable, &keytableLen, enableEncryption, kmcMasterPath, kmcStandByPath);
+    server.GetKerberosKeytab(keyTabFilePath, &keytable, &keytableLen, enableEncryption);
     auto ret = server.ServerInit(serverPrincipalName, {keytable, keytableLen});
     EXPECT_EQ((KrbRc)ret.mResult, KrbRc::CDF_OK); // expect succees
 

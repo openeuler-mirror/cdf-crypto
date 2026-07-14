@@ -10,17 +10,11 @@ function(setup_coverage)
   endif()
 
   set(COVERAGE_COMPILER_FLAGS "-g --coverage")
-  set(CMAKE_C_FLAGS
-      "${CMAKE_C_FLAGS} ${COVERAGE_COMPILER_FLAGS}"
-      PARENT_SCOPE)
-  set(CMAKE_CXX_FLAGS
-      "${CMAKE_CXX_FLAGS} ${COVERAGE_COMPILER_FLAGS}"
-      PARENT_SCOPE)
+  add_compile_options("-g" "--coverage")
+  add_link_options("--coverage")
   set(COVERAGE_DIR ${CMAKE_BINARY_DIR}/coverage)
   message(
     STATUS "Appending code coverage compiler flags: ${COVERAGE_COMPILER_FLAGS}")
-
-  link_libraries(gcov)
 
   execute_process(COMMAND mkdir -p ${CMAKE_BINARY_DIR}/coverage
                   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
@@ -65,8 +59,11 @@ function(setup_coverage)
     set(HTML_PATH ${CMAKE_BINARY_DIR}/coverage/total.html)
     add_custom_target(
       coverage
-      COMMAND ${GCOVR_PATH} -f src --gcov-exclude '.+log.+' --html-details
-              ${HTML_PATH}
+      COMMAND
+        ${GCOVR_PATH} -f src --gcov-exclude '.+log.+'
+        --html-medium-threshold-line 70 --html-high-threshold-line 90
+        --html-medium-threshold-branch 40 --html-high-threshold-branch 60
+        --html-details ${HTML_PATH}
       WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
     if(POWERSHELL_PATH)
       message(STATUS "powershell found in ${POWERSHELL_PATH}")
