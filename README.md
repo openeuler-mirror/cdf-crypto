@@ -37,37 +37,47 @@ sudo yum install -y krb5-libs
 sudo yum install -y libasan
 ```
 
-+ 其他依赖默认自动下载
++ 其他依赖可通过 `--fetch-deps` 显式允许自动下载
 
 2. 编译指导
 
-+ 直接通过预制脚本编译
++ 默认构建（Release、全部模块、离线依赖）
 
 ```
-sh build.sh output
+bash build.sh
 ```
 
-+ rpm包构建
++ 测试、覆盖率、安装和 RPM
 
 ```
-sh build.sh rpm
+bash build.sh test
+bash build.sh coverage
+bash build.sh install --fetch-deps
+bash build.sh package rpm --fetch-deps
 ```
 
-+ 编译选项
++ 指定模块和 Debug 配置
 
 ```
---help         # 显示帮助信息
---debug        # debug模式
---enable       # 支持编译部分模块，用空格分隔模块
+bash build.sh build --profile debug --modules rand,authorization
 ```
+
++ `config.sh` 是简化入口，等价于执行 `bash build.sh build`，其后参数会原样传递：
+
+```
+bash config.sh --profile debug --modules rand,authorization
+```
+
++ 完整命令、参数、产物位置和旧命令迁移见[构建指南](docs/build.md)
 
 3. 安装指导
 
-+ rpm包构建后进行安装
++ RPM 构建后进行安装
 
 ```
-sudo rpm -ivh --nodes /package/rpm/cdf-crypto-*.rpm
-# 设置环境变量
+sudo rpm -ivh --nodeps package/rpm/cdf-crypto-*.rpm
+# 库目录由 CMake 的 GNUInstallDirs 决定。openEuler 64 位环境通常为
+# /usr/lib64/cdf；其他平台也可能为 /usr/lib/cdf，请按实际目录设置。
 echo 'export LD_LIBRARY_PATH=/usr/lib64/cdf:$LD_LIBRARY_PATH' >> ~/.bashrc
 source ~/.bashrc
 ```

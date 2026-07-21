@@ -33,28 +33,39 @@ sudo yum install -y krb5-devel
 sudo yum install -y krb5-libs
 sudo yum install -y libasan
 ```
-+ Other dependencies are downloaded automatically by default
++ Use `--fetch-deps` to explicitly permit automatic dependency downloads
 2. Build Instructions
-+ Compile directly with the preconfigured script
++ Default build (Release, all modules, offline dependencies)
 ```
-sh build.sh output
+bash build.sh
 ```
-+ RPM package building
++ Tests, coverage, installation, and RPM packaging
 ```
-sh build.sh rpm
+bash build.sh test
+bash build.sh coverage
+bash build.sh install --fetch-deps
+bash build.sh package rpm --fetch-deps
 ```
-+ Compilation options
++ Select modules and the Debug profile
 
 ```
---help         # Display help information
---debug        # Debug mode
---enable       # Support compiling partial modules, separate modules with spaces
+bash build.sh build --profile debug --modules rand,authorization
 ```
++ `config.sh` is a convenience entry point. It delegates to
+  `bash build.sh build` and forwards all following options unchanged:
+
+```
+bash config.sh --profile debug --modules rand,authorization
+```
+
++ See the [complete build guide](docs/build.en.md) for commands, options,
+  artifact locations, and migration from old commands.
 3. Installation Instructions
 + Install after RPM package building
 ```
-sudo rpm -ivh --nodes /package/rpm/cdf-crypto-*.rpm
-# set LD_LIBRARY_PATH
+sudo rpm -ivh --nodeps package/rpm/cdf-crypto-*.rpm
+# GNUInstallDirs determines the library directory. It is usually
+# /usr/lib64/cdf on 64-bit openEuler, but may be /usr/lib/cdf elsewhere.
 echo 'export LD_LIBRARY_PATH=/usr/lib64/cdf:$LD_LIBRARY_PATH' >> ~/.bashrc
 source ~/.bashrc
 ```
