@@ -1,0 +1,7 @@
+if(NOT "$ENV{DESTDIR}" STREQUAL "")
+  set(cpack_install_root "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}")
+  set(cpack_staging_dir "@PROJECT_BINARY_DIR@/cpack-staging")
+  file(REMOVE_RECURSE "${cpack_staging_dir}")
+  file(MAKE_DIRECTORY "${cpack_staging_dir}")
+  file(COPY "${cpack_install_root}/" DESTINATION "${cpack_staging_dir}")
+endif()

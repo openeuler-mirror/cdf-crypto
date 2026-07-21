@@ -1,0 +1,27 @@
+include_guard(GLOBAL)
+
+function(cdf_configure_dependencies)
+  if(ENABLE_DOWNLOAD_DEPENDENCY OR ENABLE_MODULE_CRYPTION OR
+     ENABLE_MODULE_RAND)
+    find_program(CDF_NATIVE_MAKE_EXECUTABLE NAMES gmake make)
+    if(NOT CDF_NATIVE_MAKE_EXECUTABLE)
+      message(FATAL_ERROR
+        "GNU Make is required to build the selected third-party dependencies")
+    endif()
+  endif()
+
+  include(deps/libboundscheck)
+
+  if(BUILD_TEST)
+    include(deps/gtest)
+  endif()
+  if(ENABLE_MODULE_CRYPTION OR ENABLE_MODULE_RAND)
+    include(deps/openssl)
+  endif()
+  if(ENABLE_MODULE_AUTHENTICATION)
+    include(deps/krb5)
+  endif()
+  if(ENABLE_MODULE_AUTHORIZATION OR ENABLE_MODULE_KEY_MANAGEMENT)
+    include(deps/rapidjson)
+  endif()
+endfunction()

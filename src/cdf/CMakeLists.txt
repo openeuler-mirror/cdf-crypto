@@ -3,6 +3,7 @@
 #
 
 add_library(cdf_obj OBJECT)
+cdf_apply_project_options(cdf_obj)
 
 if(BUILD_TEST)
   target_compile_definitions(cdf_obj PRIVATE CDF_RAND_TESTING)
@@ -14,27 +15,14 @@ target_include_directories(
     # this include path will only be used in build tree
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
     # PRIVATE
-    ${PROJECT_SOURCE_DIR}/src
+    ${PROJECT_SOURCE_DIR}/src)
+target_include_directories(
+  cdf_obj
+  SYSTEM PUBLIC
     ${CMAKE_DEPENDENCY_INCLUDEDIR}
     ${CMAKE_DEPENDENCY_INCLUDEDIR}/securec)
 
 set(CDF_SOURCE_FILES "")
-
-if(NOT BUILD_TEST)
-  # only used in src
-  add_compiler_flags("-fuse-ld=gold")
-  add_compiler_flags("-Wunused-variable")
-  add_compiler_flags("-Wunused-value")
-  add_compiler_flags("-Wformat=2")
-  add_compiler_flags("-Wfloat-equal")
-  #add_compiler_flags("-Wvla")
-  #add_compiler_flags("-Wconversion")
-  #add_compiler_flags("-Wnon-virtual-dtor")
-  add_compiler_flags("-Wshadow")
-  add_compiler_flags("-Wtrampolines")
-  add_compiler_flags("-Wswitch-default")
-  add_compiler_flags("-Wundef")
-endif()
 
 add_subdirectory(base)
 add_subdirectory(utils)
@@ -67,6 +55,7 @@ endif()
 if(ENABLE_ALL_MODULES OR ENABLE_MODULE_CRYPTION)
   message(STATUS "Enabling module: cryption")
   add_subdirectory(modules/cryption)
+  target_link_libraries(cdf_obj PUBLIC Dependency::openssl)
 else()
   message(STATUS "Skipping module: cryption")
 endif()
@@ -96,37 +85,37 @@ endif()
 
 target_sources(cdf_obj PRIVATE ${CDF_SOURCE_FILES})
 
-target_link_libraries(cdf_obj PUBLIC Dependency::secure_c Dependency::openssl# static lib
-)
+target_link_libraries(cdf_obj PUBLIC Dependency::secure_c)
 
 # ----------------------
 # Output Libs
 # ----------------------
 
 add_library(cdf STATIC)
-target_link_libraries(cdf PRIVATE cdf_obj Dependency::openssl)
+cdf_apply_project_options(cdf)
+target_link_libraries(cdf PRIVATE cdf_obj)
 target_include_directories(
   cdf
   PUBLIC
     # this include path will only be used in build tree
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
     # PRIVATE
-    ${PROJECT_SOURCE_DIR}/src
+    ${PROJECT_SOURCE_DIR}/src)
+target_include_directories(
+  cdf
+  SYSTEM PUBLIC
     ${CMAKE_DEPENDENCY_INCLUDEDIR}
     ${CMAKE_DEPENDENCY_INCLUDEDIR}/securec)
 add_library(CDF::cdf ALIAS cdf) # alias
+install(TARGETS cdf
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 
 if(ENABLE_SHARED)
   add_library(cdf_shared SHARED)
+  cdf_apply_project_options(cdf_shared)
   target_link_libraries(cdf_shared PRIVATE cdf_obj)
+  install(TARGETS cdf_shared
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 endif()
-
-# if(NOT ENABLE_COVERAGE)
-# if(NOT BUILD_HSE_ONLY)
-# add_subdirectory(cli)
-# endif()
-# endif()
-
-# if(BUILD_FUZZ)
-# target_link_libraries(cdf PRIVATE Dependency::secodefuzz)
-# endif()
