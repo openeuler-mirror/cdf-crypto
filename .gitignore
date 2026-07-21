@@ -5,6 +5,7 @@ build_noasan
 docs/superpowers
 *.eld
 output
+/package/
 data/*
 !data/.keep
 
