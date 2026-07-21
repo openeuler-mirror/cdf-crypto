@@ -22,8 +22,9 @@
 #include "openssl/rand.h"
 #include "openssl/provider.h"
 #include "securec.h"
-#include "test_utils.h"
+#include "test_log_utils.h"
 
+#include "cdf/base/custom_logger.h"
 #include "cdf/modules/rand/rand.h"
 
 namespace cdf::test {
@@ -93,7 +94,7 @@ class RandTest : public ::testing::Test {
 protected:
     void SetUp() override
     {
-        EXPECT_TRUE(Logger::Instance()->SetExternalLogFunction(SetExternalLogCallBack));
+        EXPECT_TRUE(Logger::Instance()->SetExternalLogFunction(TestLogCallback));
     }
 
     void TearDown() override

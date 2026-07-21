@@ -11,16 +11,11 @@
 
 #pragma once
 
-#include <dlfcn.h>
-
 #include <cstdint>
-#include <iostream>
-#include <mutex>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "cdf/base/custom_logger.h"
 #include "cdf/modules/cryption/define.h"
 #include "cdf/modules/key_management/key_manager.h"
 
@@ -56,10 +51,6 @@ public:
      */
     std::pair<CryptionRC, std::vector<std::byte>> Decrypt(CryptoSymAlg alg, std::string_view ciphertext,
                                                           uint32_t domainId);
-
-    // -------------------
-    // Alias
-    // -------------------
 
     std::pair<CryptionRC, std::vector<std::byte>> Encrypt(CryptoSymAlg alg, std::vector<std::byte> plaintext,
                                                           uint32_t domainId)

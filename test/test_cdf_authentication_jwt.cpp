@@ -28,7 +28,7 @@
 #include "cdf/modules/key_management/key_manager_factory.h"
 #include "cdf/modules/key_management/openbao/openbao_utils.h"
 #include "cdf/modules/key_management/openbao/openbao_key_manager.h"
-#include "cdf/modules/cryption/km_cryptor.h"
+#include "cdf/modules/key_management/km_cryptor.h"
 
 namespace cdf::test {
 

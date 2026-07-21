@@ -11,15 +11,9 @@
  * See the Mulan PSL v2 for more details.
  */
 
-#include <unistd.h>
-
 #include <algorithm>
-#include <climits>
-#include <filesystem>
-#include <iostream>
 #include <string>
 #include <string_view>
-#include <thread>
 #include <vector>
 
 // Make cleancode happy
@@ -27,10 +21,8 @@
 #include "gtest/gtest.h"
 #include "securec.h"
 #include "stub.h"
-#include "test_utils.h"
+#include "test_log_utils.h"
 // clang-format on
-
-#include <krb5/krb5.h>
 
 #include "openssl/evp.h"
 
@@ -38,66 +30,24 @@
 #include "cdf/modules/cryption/define.h"
 #include "cdf/modules/cryption/hash.h"
 #include "cdf/modules/cryption/hmac.h"
-#include "cdf/modules/cryption/km_cryptor.h"
 #include "cdf/modules/cryption/native_cryptor.h"
 #include "cdf/modules/cryption/native_cryptor_engine.h"
-#include "cdf/modules/key_management/define.h"
-#include "cdf/modules/key_management/key_manager.h"
-#include "cdf/modules/key_management/key_manager_factory.h"
-#include "cdf/modules/key_management/openbao/openbao_key_manager.h"
-#include "cdf/modules/key_management/openbao/openbao_utils.h"
 #include "cdf/modules/rand/rand.h"
 
 namespace cdf::test {
 constexpr static auto SIZE = 1024 * 1024;
 
-class KmCryptorTest : public ::testing::Test {
-protected:
-    void SetUp() override
-    {
-        EXPECT_TRUE(Logger::Instance()->SetExternalLogFunction(SetExternalLogCallBack));
-    }
-};
-
 class TestCrypto : public ::testing::Test {
 protected:
     void SetUp() override
     {
-        EXPECT_TRUE(Logger::Instance()->SetExternalLogFunction(SetExternalLogCallBack));
+        EXPECT_TRUE(Logger::Instance()->SetExternalLogFunction(TestLogCallback));
     }
 };
 
 namespace {
 
 constexpr std::string_view TEST_PLAINTEXT = "1";
-
-const std::string KM_EXEPATH = "./";
-const std::string KM_ACCESSTOKEN = "testToken";
-
-constexpr int DEFAULT_DOMAIN_COUNT = 2;
-
-const std::string DEFAULT_KSF_BACKUP = std::filesystem::current_path().string() + "/ksf_backup";
-
-inline std::string VecByteToString(std::vector<std::byte> in)
-{
-    return {reinterpret_cast<char *>(in.data()), in.size()};
-}
-
-inline void KmcOperation(int userId, KeyManager *km)
-{
-    const int defaultIteratonNum = 3000;
-    auto cryptor = KmCryptor(km);
-    for (int i = 0; i < defaultIteratonNum; ++i) {
-        auto ret = cryptor.Encrypt(CryptoSymAlg::AES256_GCM, "1111111111", 0);
-        ASSERT_EQ((int)ret.first, (int)CryptionRC::OK);
-        ret = cryptor.Decrypt(CryptoSymAlg::AES256_GCM, ret.second, 0);
-        ASSERT_TRUE(ret.first == CryptionRC::OK);
-        ASSERT_EQ(VecByteToString(ret.second), "1111111111");
-        if (userId == 1) {
-            std::cout << "User " << userId << " complete " << i << std::endl;
-        }
-    }
-}
 
 } // namespace
 
@@ -443,43 +393,7 @@ TEST_F(TestCrypto, Secure_PBKDF2_Interface_Para_Verification_12)
     memset_s(testStr, strlen(testStr), 0, strlen(testStr));
 }
 
-TEST_F(KmCryptorTest, DISABLED_PERFORMANCE_TEST)
-{
-    std::vector<std::thread> threads;
-    auto *km = KeyManagerFactory::Borrow(KeyManagerTy::OPENBAO);
-    if (km->CheckInited()) {
-        km->UnInit();
-    }
-
-    auto rc = km->Init("/bin/bao", "xxxxxxxxxxxxxxxxxxxxxx", 2);
-    ASSERT_EQ(rc, KeyManagerRC::OK);
-    ASSERT_EQ(km->CreateKey(0).first, KeyManagerRC::OK);
-
-    // 创建16个用户线程
-    const int numUsers = 16;
-    threads.reserve(numUsers);
-    for (int i = 0; i < numUsers; ++i) {
-        threads.emplace_back(KmcOperation, i, km);
-    }
-
-    // 等待所有线程完成
-    for (auto &thread : threads) {
-        thread.join();
-    }
-
-    km->UnInit();
-}
-
-TEST_F(KmCryptorTest, UNINIT_TEST)
-{
-    auto *km = KeyManagerFactory::Borrow(KeyManagerTy::OPENBAO);
-    auto cryptor = KmCryptor(km);
-    km->UnInit();
-    auto ret = cryptor.Encrypt(CryptoSymAlg::AES128_GCM, "123213", 0);
-    EXPECT_EQ(ret.first, CryptionRC::UNINITED);
-}
-
-TEST_F(KmCryptorTest, Sha256Success)
+TEST_F(TestCrypto, Sha256Success)
 {
     std::string_view str;
     std::vector<char> output1;
@@ -505,7 +419,7 @@ TEST_F(KmCryptorTest, Sha256Success)
     EXPECT_EQ(output3, vec);
 }
 
-TEST_F(KmCryptorTest, Sha256UpdateError)
+TEST_F(TestCrypto, Sha256UpdateError)
 {
     std::string_view str = "1234";
     Stub stub;
@@ -516,7 +430,7 @@ TEST_F(KmCryptorTest, Sha256UpdateError)
     stub.Reset(Hash::Update);
 }
 
-TEST_F(KmCryptorTest, Sha256FinalizeError)
+TEST_F(TestCrypto, Sha256FinalizeError)
 {
     std::string_view str = "1234";
     Stub stub;
@@ -527,7 +441,7 @@ TEST_F(KmCryptorTest, Sha256FinalizeError)
     stub.Reset(Hash::Finalize);
 }
 
-TEST_F(KmCryptorTest, Hash_Hash)
+TEST_F(TestCrypto, Hash_Hash)
 {
     Hash hash1(HashAlgorithm::UNKNOWN);
     std::string_view str = "test";
@@ -546,7 +460,7 @@ TEST_F(KmCryptorTest, Hash_Hash)
     EXPECT_EQ(ret, true);
 }
 
-TEST_F(KmCryptorTest, Hash_MdNewCtxError)
+TEST_F(TestCrypto, Hash_MdNewCtxError)
 {
     Stub stub;
     stub.Set(EVP_MD_CTX_new, StubEvpMdCtxNewError);

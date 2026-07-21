@@ -28,7 +28,6 @@
 #include "securec.h"
 #include "cdf/base/common_define.h"
 #include "cdf/base/ccsec_logger.h"
-#include "cdf/modules/cryption/define.h"
 #include "cdf/modules/rand/rand.h"
 
 namespace cdf {

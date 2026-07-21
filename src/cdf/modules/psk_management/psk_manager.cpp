@@ -24,7 +24,7 @@
 #include "rapidjson/writer.h"
 
 #include "cdf/base/ccsec_logger.h"
-#include "cdf/modules/cryption/km_cryptor.h"
+#include "cdf/modules/key_management/km_cryptor.h"
 #include "cdf/modules/key_management/key_manager_factory.h"
 #include "cdf/modules/psk_management/psk_define.h"
 #include "cdf/modules/rand/rand.h"

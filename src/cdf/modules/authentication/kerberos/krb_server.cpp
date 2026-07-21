@@ -36,7 +36,7 @@
 #include "cdf/connector/krb5_wrapper.h"
 #include "cdf/modules/authentication/kerberos/krb_ctx.h"
 #include "cdf/modules/cryption/define.h"
-#include "cdf/modules/cryption/km_cryptor.h"
+#include "cdf/modules/key_management/km_cryptor.h"
 #include "cdf/modules/key_management/define.h"
 #include "cdf/modules/key_management/key_manager_factory.h"
 #include "cdf/utils/file_utils.h"

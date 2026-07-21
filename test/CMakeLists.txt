@@ -3,15 +3,25 @@
 # --------------------------
 
 set(OPENSSL_PATH ${CMAKE_DEPENDENCY_LIBDIR})
+string(REPLACE ";" "\\;" CDF_PARENT_LD_LIBRARY_PATH
+       "$ENV{LD_LIBRARY_PATH}")
+set(CDF_TEST_ENVIRONMENT
+    "OPENSSL_PATH=${OPENSSL_PATH};LD_LIBRARY_PATH=${CMAKE_DEPENDENCY_LIBDIR}:${CDF_PARENT_LD_LIBRARY_PATH}")
 
 # --------------------------
 # Declare CDF tests
 # --------------------------
-# Common test utilities (always included)
+# Common tests that only depend on the CDF base and utility sources.
 set(ALL_TEST_SOURCES
-        ${CMAKE_CURRENT_SOURCE_DIR}/test_utils.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test_cdf_utils.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test_cdf_base.cpp)
+
+# Key-manager-aware helpers are only needed by tests for these modules.  Keep
+# them out of independent module builds such as authorization-only.
+if(ENABLE_MODULE_KEY_MANAGEMENT OR ENABLE_MODULE_AUTHENTICATION OR
+   ENABLE_MODULE_PSK_MANAGEMENT OR ENABLE_ALL_MODULES)
+    list(APPEND ALL_TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/test_utils.cpp)
+endif()
 
 # Conditionally include module-specific tests
 if(ENABLE_MODULE_CRYPTION OR ENABLE_ALL_MODULES)
@@ -20,6 +30,7 @@ endif()
 
 if(ENABLE_MODULE_KEY_MANAGEMENT OR ENABLE_ALL_MODULES)
     list(APPEND ALL_TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/test_cdf_key_manager.cpp)
+    list(APPEND ALL_TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/test_cdf_km_cryptor.cpp)
 endif()
 
 if(ENABLE_MODULE_AUTHORIZATION OR ENABLE_ALL_MODULES)
@@ -40,6 +51,7 @@ if(ENABLE_MODULE_PSK_MANAGEMENT OR ENABLE_ALL_MODULES)
 endif()
 
 add_executable(cdf_ut_test_all ${ALL_TEST_SOURCES})
+cdf_apply_project_options(cdf_ut_test_all)
 target_compile_definitions(cdf_ut_test_all PRIVATE CDF_RAND_TESTING)
 target_link_libraries(cdf_ut_test_all PRIVATE
     CDF::cdf
@@ -50,21 +62,14 @@ target_link_libraries(cdf_ut_test_all PRIVATE
 add_test(NAME cdf_ut_test_all COMMAND cdf_ut_test_all)
 
 set_tests_properties(cdf_ut_test_all PROPERTIES
-    ENVIRONMENT "OPENSSL_PATH=${OPENSSL_PATH};LD_LIBRARY_PATH=${CMAKE_DEPENDENCY_LIBDIR}:$LD_LIBRARY_PATH"
-)
-
-add_custom_target(build_test
-        COMMAND env
-        LD_PRELOAD=/usr/lib/gcc/aarch64-openEuler-linux/12/libasan.so
-        LD_LIBRARY_PATH=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/../lib64:${CMAKE_DEPENDENCY_LIBDIR}:$LD_LIBRARY_PATH
-        $<TARGET_FILE:cdf_ut_test_all> --gtest_output=xml:${PROJECT_SOURCE_DIR}/build/test_results.xml
-        DEPENDS cdf_ut_test_all
+    ENVIRONMENT "${CDF_TEST_ENVIRONMENT}"
 )
 
 if(ENABLE_MODULE_RAND OR ENABLE_ALL_MODULES)
     add_executable(deploy_verify_rand
         ${CMAKE_CURRENT_SOURCE_DIR}/deploy_verify_rand.cpp
     )
+    cdf_apply_project_options(deploy_verify_rand)
     target_link_libraries(deploy_verify_rand PRIVATE
         CDF::cdf
     )
@@ -73,6 +78,6 @@ if(ENABLE_MODULE_RAND OR ENABLE_ALL_MODULES)
     )
     add_test(NAME deploy_verify_rand COMMAND deploy_verify_rand)
     set_tests_properties(deploy_verify_rand PROPERTIES
-        ENVIRONMENT "OPENSSL_PATH=${OPENSSL_PATH};LD_LIBRARY_PATH=${CMAKE_DEPENDENCY_LIBDIR}:$LD_LIBRARY_PATH"
+        ENVIRONMENT "${CDF_TEST_ENVIRONMENT}"
     )
 endif()

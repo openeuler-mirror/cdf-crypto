@@ -29,7 +29,7 @@
 #include "cdf/base/common_define.h"
 #include "cdf/cli/defines.h"
 #include "cdf/modules/cryption/define.h"
-#include "cdf/modules/cryption/km_cryptor.h"
+#include "cdf/modules/key_management/km_cryptor.h"
 #include "cdf/modules/key_management/define.h"
 #include "cdf/modules/key_management/key_manager.h"
 #include "cdf/modules/key_management/key_manager_factory.h"
