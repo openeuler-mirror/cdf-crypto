@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+PROJECT_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
+TEST_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/cdf-coverage-report.XXXXXX")
+trap 'rm -rf -- "${TEST_ROOT}"' EXIT
+SHADOW_ROOT="${TEST_ROOT}/project"
+COVERAGE_BUILD_DIR="${SHADOW_ROOT}/build/coverage"
+
+mkdir -p "${SHADOW_ROOT}" "${COVERAGE_BUILD_DIR}"
+cp "${PROJECT_ROOT}/build.sh" "${SHADOW_ROOT}/build.sh"
+for path in CMakeLists.txt cmake config.sh docs scripts src test; do
+    cp -a "${PROJECT_ROOT}/${path}" "${SHADOW_ROOT}/${path}"
+done
+# Dependency source trees can be large and are read-only inputs to their
+# isolated ExternalProject builds, so sharing them does not contaminate the
+# developer's build or coverage report.
+ln -s "${PROJECT_ROOT}/external" "${SHADOW_ROOT}/external"
+touch "${COVERAGE_BUILD_DIR}/stale-coverage-marker"
+
+bash "${SHADOW_ROOT}/build.sh" coverage --modules rand --jobs 2
+[[ ! -e "${COVERAGE_BUILD_DIR}/stale-coverage-marker" ]]
+[[ -f "${COVERAGE_BUILD_DIR}/report/total.html" ]]
+[[ -f "${COVERAGE_BUILD_DIR}/report/coverage.xml" ]]
+[[ -f "${COVERAGE_BUILD_DIR}/report/coverage.txt" ]]
+grep -q '<coverage ' "${COVERAGE_BUILD_DIR}/report/coverage.xml"
+grep -Fq -- "--gcov-executable $(command -v gcov)" \
+    "${COVERAGE_BUILD_DIR}/build.ninja" 2>/dev/null || \
+grep -Fq -- "--gcov-executable $(command -v gcov)" \
+    "${COVERAGE_BUILD_DIR}/CMakeFiles/coverage.dir/build.make"
+
+echo "coverage report tests passed"

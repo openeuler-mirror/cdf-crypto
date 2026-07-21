@@ -81,3 +81,32 @@ if(ENABLE_MODULE_RAND OR ENABLE_ALL_MODULES)
         ENVIRONMENT "${CDF_TEST_ENVIRONMENT}"
     )
 endif()
+
+find_program(BASH_EXECUTABLE bash)
+if(NOT BASH_EXECUTABLE)
+    message(FATAL_ERROR "bash is required to run CDF build-system tests")
+endif()
+
+function(cdf_add_build_system_test name script)
+    add_test(NAME ${name}
+        COMMAND "${BASH_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/${script}")
+    set_tests_properties(${name} PROPERTIES LABELS "build-system")
+endfunction()
+
+cdf_add_build_system_test(build_script_contract test/build_script_test.sh)
+cdf_add_build_system_test(build_packaging_config
+    test/cmake/test_packaging_config.sh)
+cdf_add_build_system_test(build_target_scopes
+    test/cmake/test_target_scopes.sh)
+cdf_add_build_system_test(build_test_and_coverage_config
+    test/cmake/test_test_and_coverage_config.sh)
+cdf_add_build_system_test(build_copy_git_worktree
+    test/cmake/test_copy_git_worktree.sh)
+cdf_add_build_system_test(build_native_make_tool
+    test/cmake/test_native_make_tool.sh)
+set_tests_properties(build_native_make_tool PROPERTIES SKIP_RETURN_CODE 77)
+
+add_test(NAME build_module_resolver
+    COMMAND "${CMAKE_COMMAND}" -P
+            "${PROJECT_SOURCE_DIR}/test/cmake/test_resolve_modules.cmake")
+set_tests_properties(build_module_resolver PROPERTIES LABELS "build-system")
