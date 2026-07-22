@@ -31,6 +31,21 @@ protected:
 
 namespace {
 
+class DummyKeyManager final : public KeyManager {
+public:
+    KeyManagerRC Init(std::string_view, std::string_view, uint32_t) override { return KeyManagerRC::OK; }
+    KeyManagerTy Type() const override { return static_cast<KeyManagerTy>(99); }
+    uint32_t DomainCount() const override { return 0; }
+    bool CheckInited() const override { return true; }
+    KeyManagerRC UnInit() override { return KeyManagerRC::OK; }
+    std::pair<KeyManagerRC, uint32_t> CreateKey(uint32_t) override { return {KeyManagerRC::OK, 0}; }
+    KeyManagerRC RemoveKey(uint32_t, uint32_t) override { return KeyManagerRC::OK; }
+    KeyManagerRC DisplayAllKey() const override { return KeyManagerRC::OK; }
+    KeyManagerRC DisplayKey(uint32_t) const override { return KeyManagerRC::OK; }
+    KeyManagerRC CheckDomainKeysExpired(uint32_t, uint32_t) override { return KeyManagerRC::OK; }
+    KeyManagerRC CheckDomainKeysExpiredAndAutoUpdate(uint32_t, uint32_t) override { return KeyManagerRC::OK; }
+};
+
 std::string VecByteToString(std::vector<std::byte> input)
 {
     return {reinterpret_cast<char *>(input.data()), input.size()};
@@ -85,6 +100,18 @@ TEST_F(KmCryptorTest, UninitializedKeyManager)
     km->UnInit();
     auto ret = cryptor.Encrypt(CryptoSymAlg::AES128_GCM, "123213", 0);
     EXPECT_EQ(ret.first, CryptionRC::UNINITED);
+}
+
+TEST_F(KmCryptorTest, NullAndUnknownManagersReturnErrors)
+{
+    KmCryptor nullCryptor(static_cast<KeyManager *>(nullptr));
+    EXPECT_EQ(nullCryptor.Encrypt(CryptoSymAlg::AES128_GCM, "data", 0).first, CryptionRC::ERROR);
+    EXPECT_EQ(nullCryptor.Decrypt(CryptoSymAlg::AES128_GCM, std::string_view{}, 0).first, CryptionRC::ERROR);
+
+    DummyKeyManager dummy;
+    KmCryptor unknownCryptor(&dummy);
+    EXPECT_EQ(unknownCryptor.Encrypt(CryptoSymAlg::AES128_GCM, "data", 0).first, CryptionRC::INVALID_PARAM);
+    EXPECT_EQ(unknownCryptor.Decrypt(CryptoSymAlg::AES128_GCM, std::string_view{}, 0).first, CryptionRC::INVALID_PARAM);
 }
 
 } // namespace cdf::test

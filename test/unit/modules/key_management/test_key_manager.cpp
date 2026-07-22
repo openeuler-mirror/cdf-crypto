@@ -25,6 +25,7 @@
 #include "cdf/modules/key_management/openbao/openbao_key_manager.h"
 #include "cdf/modules/key_management/openbao/openbao_utils.h"
 #include "cdf/modules/key_management/vault/vault_key_manager.h"
+#include "cdf/utils/base64.h"
 
 namespace cdf::test {
 namespace {
@@ -101,6 +102,12 @@ std::pair<CryptionRC, std::vector<std::byte>> StubDecryptError([[maybe_unused]] 
                                                                [[maybe_unused]] std::vector<std::byte> &key)
 {
     return {CryptionRC::ERROR, {}};
+}
+
+std::string EncodeCipher(const std::vector<unsigned char> &native)
+{
+    auto encoded = Base64Encode(reinterpret_cast<const char *>(native.data()), native.size());
+    return {reinterpret_cast<const char *>(encoded.data()), encoded.size()};
 }
 
 TEST_F(KeyManagerOpenbaoTest, UnInit)
@@ -456,6 +463,93 @@ TEST_F(KeyManagerOpenbaoTest, Decrypt)
     stub.Reset(RunCommandAndGetResult);
     stub.Reset(GetJsonFieldMaxInt);
     stub.Reset(GetJsonFieldIntPairVec);
+}
+
+TEST_F(KeyManagerOpenbaoTest, EncryptDecryptRoundTripThroughCipherHeader)
+{
+    auto &km = OpenbaoKeyManager::GetInstance();
+    EnsureKmUninited(&km);
+    Stub stub;
+    stub.Set(RunCommandAndGetResult, StubRunCommandAndGetResult);
+    stub.Set(GetJsonFieldIntPairVec, StubGetJsonFieldIntPairVec);
+    ASSERT_EQ(km.Init("./", "test_token", 2), KeyManagerRC::OK);
+
+    stub.Set(RunCommandAndCheck, StubRunCommandAndCheck);
+    stub.Set(GetJsonFieldMaxInt, StubGetJsonFieldMaxInt);
+    ASSERT_EQ(km.CreateKey(0).first, KeyManagerRC::OK);
+    stub.Set(GetJsonFieldAsStr, StubGetOpenbaoLastKeyAsStr);
+    stub.Set(NativeCryptor::Encrypt, StubEncrypt);
+    stub.Set(NativeCryptor::Decrypt, StubDecrypt);
+
+    auto [encryptRc, ciphertext] = km.Encrypt(CryptoSymAlg::AES256_GCM, 0, "payload");
+    ASSERT_EQ(encryptRc, KeyManagerRC::OK);
+    ASSERT_FALSE(ciphertext.empty());
+    std::string encoded(reinterpret_cast<const char *>(ciphertext.data()), ciphertext.size());
+
+    auto [decryptRc, plaintext] = km.Decrypt(CryptoSymAlg::AES256_GCM, 0, encoded);
+    EXPECT_EQ(decryptRc, KeyManagerRC::OK);
+    EXPECT_EQ(plaintext, (std::vector<std::byte>{std::byte{0}}));
+
+    auto native = Base64Decode(encoded);
+    ASSERT_GT(native.size(), 6U);
+    auto shortHeader = std::vector<unsigned char>(native.begin(), native.begin() + 6);
+    EXPECT_EQ(km.Decrypt(CryptoSymAlg::AES256_GCM, 0, EncodeCipher(shortHeader)).first,
+              KeyManagerRC::INVALID_PARAM);
+
+    auto badVersion = native;
+    badVersion[0] = 2;
+    EXPECT_EQ(km.Decrypt(CryptoSymAlg::AES256_GCM, 0, EncodeCipher(badVersion)).first,
+              KeyManagerRC::INVALID_PARAM);
+
+    auto wrongAlgorithm = native;
+    wrongAlgorithm[1] = static_cast<unsigned char>(CryptoSymAlg::AES128_GCM);
+    EXPECT_EQ(km.Decrypt(CryptoSymAlg::AES256_GCM, 0, EncodeCipher(wrongAlgorithm)).first,
+              KeyManagerRC::INVALID_PARAM);
+
+    ASSERT_EQ(km.CreateKey(1).first, KeyManagerRC::OK);
+    auto wrongDomain = native;
+    wrongDomain[3] = 1;
+    EXPECT_EQ(km.Decrypt(CryptoSymAlg::AES256_GCM, 0, EncodeCipher(wrongDomain)).first,
+              KeyManagerRC::INVALID_PARAM);
+
+    auto missingKey = native;
+    missingKey[4] = 0x03;
+    missingKey[5] = 0xE7;
+    EXPECT_EQ(km.Decrypt(CryptoSymAlg::AES256_GCM, 0, EncodeCipher(missingKey)).first, KeyManagerRC::ERROR);
+
+    EXPECT_EQ(km.DeleteAllKey(), KeyManagerRC::OK);
+    EXPECT_EQ(km.UnInit(), KeyManagerRC::OK);
+    stub.Reset(NativeCryptor::Decrypt);
+    stub.Reset(NativeCryptor::Encrypt);
+    stub.Reset(GetJsonFieldAsStr);
+    stub.Reset(GetJsonFieldMaxInt);
+    stub.Reset(RunCommandAndCheck);
+    stub.Reset(GetJsonFieldIntPairVec);
+    stub.Reset(RunCommandAndGetResult);
+}
+
+TEST_F(KeyManagerOpenbaoTest, RejectsInvalidPayloadsAfterInitialization)
+{
+    auto &km = OpenbaoKeyManager::GetInstance();
+    EnsureKmUninited(&km);
+    Stub stub;
+    stub.Set(RunCommandAndGetResult, StubRunCommandAndGetResult);
+    stub.Set(GetJsonFieldIntPairVec, StubGetJsonFieldIntPairVec);
+    ASSERT_EQ(km.Init("./", "test_token", 2), KeyManagerRC::OK);
+    stub.Set(RunCommandAndCheck, StubRunCommandAndCheck);
+    stub.Set(GetJsonFieldMaxInt, StubGetJsonFieldMaxInt);
+    ASSERT_EQ(km.CreateKey(0).first, KeyManagerRC::OK);
+
+    EXPECT_EQ(km.Encrypt(CryptoSymAlg::AES256_GCM, 0, "").first, KeyManagerRC::INVALID_PARAM);
+    EXPECT_EQ(km.Decrypt(CryptoSymAlg::AES256_GCM, 0, "").first, KeyManagerRC::INVALID_PARAM);
+    EXPECT_EQ(km.Decrypt(CryptoSymAlg::AES256_GCM, 0, "not-base64!").first, KeyManagerRC::INVALID_PARAM);
+
+    EXPECT_EQ(km.DeleteAllKey(), KeyManagerRC::OK);
+    EXPECT_EQ(km.UnInit(), KeyManagerRC::OK);
+    stub.Reset(GetJsonFieldMaxInt);
+    stub.Reset(RunCommandAndCheck);
+    stub.Reset(GetJsonFieldIntPairVec);
+    stub.Reset(RunCommandAndGetResult);
 }
 
 TEST_F(KeyManagerVaultTest, UnInit)

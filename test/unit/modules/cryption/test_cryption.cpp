@@ -460,6 +460,35 @@ TEST_F(TestCrypto, Hash_Hash)
     EXPECT_EQ(ret, true);
 }
 
+TEST_F(TestCrypto, HashRejectsEmptyInputAndUnknownDigestSize)
+{
+    Hash unknown(HashAlgorithm::UNKNOWN);
+    EXPECT_EQ(unknown.DigestSize(), 0U);
+    EXPECT_FALSE(unknown.Update({}));
+    std::vector<char> output;
+    EXPECT_FALSE(unknown.Finalize(output));
+
+    Hash hash(HashAlgorithm::SHA256);
+    EXPECT_FALSE(hash.Update({}));
+    EXPECT_TRUE(hash.Update("first"));
+    EXPECT_TRUE(hash.Update("second"));
+    EXPECT_TRUE(hash.Finalize(output));
+    EXPECT_EQ(output.size(), 32U);
+}
+
+TEST_F(TestCrypto, NativeHmacRejectsInvalidInputs)
+{
+    unsigned char output[64] = {};
+    uint32_t outputLength = sizeof(output);
+    EXPECT_EQ(NativeHmac(CryptoHmacAlg::HMAC_SHA256, {}, "data", output, &outputLength),
+              CryptionRC::INVALID_PARAM);
+    EXPECT_EQ(NativeHmac(CryptoHmacAlg::HMAC_SHA256, std::string(32, 'k'), {}, output, &outputLength),
+              CryptionRC::INVALID_PARAM);
+    EXPECT_EQ(NativeHmac(static_cast<CryptoHmacAlg>(99), std::string(64, 'k'), "data", output, &outputLength),
+              CryptionRC::INVALID_PARAM);
+    EXPECT_EQ(GetEstimateHmacOutLen(static_cast<CryptoHmacAlg>(99)), 0U);
+}
+
 TEST_F(TestCrypto, Hash_MdNewCtxError)
 {
     Stub stub;
