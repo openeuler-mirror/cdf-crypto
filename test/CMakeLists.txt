@@ -70,6 +70,7 @@ if(ENABLE_MODULE_KEY_MANAGEMENT OR ENABLE_ALL_MODULES)
     cdf_add_unit_test(cdf_ut_key_management SOURCES
         unit/modules/key_management/test_key_manager.cpp
         unit/modules/key_management/test_km_cryptor.cpp
+        unit/modules/key_management/openbao/test_openbao_utils.cpp
         LIBRARIES cdf_test_support
     )
 endif()
