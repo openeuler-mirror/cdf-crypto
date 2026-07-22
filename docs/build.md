@@ -32,7 +32,8 @@ bash build.sh build --fetch-deps
 运行测试、生成覆盖率报告、安装和打包：
 
 ```bash
-bash build.sh test
+bash build.sh test --profile debug
+bash build.sh test --profile debug --modules rand
 bash build.sh coverage
 bash build.sh install --fetch-deps
 bash build.sh package rpm --fetch-deps
@@ -184,6 +185,26 @@ bash test/cmake/test_module_matrix.sh
 这些脚本使用 `/tmp` 下的隔离工程，不会清理当前工作区的构建和覆盖率产物。
 RPM 测试需要 `cpack`、`rpmbuild` 和 `rpm`。
 
+单元测试按模块拆分为以下 CTest 目标：
+
+```text
+cdf_ut_base_utils
+cdf_ut_cryption
+cdf_ut_key_management
+cdf_ut_authorization
+cdf_ut_authentication_jwt
+cdf_ut_authentication_kerberos
+cdf_ut_rand
+cdf_ut_psk_management
+cdf_ut_cli
+```
+
+`deploy_verify_rand` 是 Rand 集成测试。开发时可只运行指定目标，例如：
+
+```bash
+ctest --test-dir build/debug -R '^cdf_ut_cli$' --output-on-failure
+```
+
 ## 第三方依赖
 
 默认使用 `external/` 中预先准备的依赖或系统依赖，不访问网络：
@@ -215,7 +236,8 @@ CDF 的 `-Werror`、Coverage、ASan 或安全加固参数。
 | ASan 构建 | `build/asan/bin`、`build/asan/<libdir>` |
 | Coverage 构建 | `build/coverage/bin`、`build/coverage/<libdir>` |
 | Coverage HTML | `build/coverage/report/total.html` |
-| Coverage XML/文本 | `build/coverage/report/coverage.xml`、`coverage.txt` |
+| Coverage XML | `build/coverage/report/coverage.xml` |
+| Coverage 文本 | `build/coverage/report/coverage.txt` |
 | Fuzz 构建 | `build/fuzz/bin`、`build/fuzz/<libdir>` |
 | 默认安装暂存 | `output/cdf` |
 | RPM | `package/rpm/*.rpm` |
@@ -230,11 +252,12 @@ CDF 的 `-Werror`、Coverage、ASan 或安全加固参数。
 sudo rpm -ivh --nodeps package/rpm/cdf-crypto-*.rpm
 ```
 
-Coverage 仅支持 GCC 编译器生成的覆盖率数据，不支持 Clang/llvm-cov。覆盖率报告
-颜色阈值：
+Coverage 仅支持 GCC 编译器生成的覆盖率数据，不支持 Clang/llvm-cov，统计范围为
+完整的 `src/cdf/**`。Lines 70%、Branches 50% 是当前质量目标，不通过
+`--fail-under-line` 或 `--fail-under-branch` 设置为持续集成硬门槛。覆盖率报告颜色阈值：
 
 - Lines：90% 以上绿色，70% 以上黄色，70% 以下红色；
-- Branches：60% 以上绿色，40% 以上黄色，40% 以下红色。
+- Branches：60% 以上绿色，50% 以上黄色，50% 以下红色。
 
 ## 清理
 

@@ -41,11 +41,15 @@ bash build.sh
 ```
 + Tests, coverage, installation, and RPM packaging
 ```
-bash build.sh test
+bash build.sh test --profile debug
+bash build.sh test --profile debug --modules rand
 bash build.sh coverage
 bash build.sh install --fetch-deps
 bash build.sh package rpm --fetch-deps
 ```
+Coverage supports GCC only. Reports are generated under
+`build/coverage/report/`. The current Lines 70% and Branches 50% targets are
+used for quality tracking and are not enforced as CI failure thresholds.
 + Select modules and the Debug profile
 
 ```

@@ -50,11 +50,15 @@ bash build.sh
 + 测试、覆盖率、安装和 RPM
 
 ```
-bash build.sh test
+bash build.sh test --profile debug
+bash build.sh test --profile debug --modules rand
 bash build.sh coverage
 bash build.sh install --fetch-deps
 bash build.sh package rpm --fetch-deps
 ```
+
+Coverage 仅支持 GCC，报告位于 `build/coverage/report/`。当前覆盖率目标为
+Lines 70%、Branches 50%，仅用于质量跟踪，不作为持续集成硬门槛。
 
 + 指定模块和 Debug 配置
 

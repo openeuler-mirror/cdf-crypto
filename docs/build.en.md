@@ -34,7 +34,8 @@ bash build.sh build --fetch-deps
 Common actions:
 
 ```bash
-bash build.sh test
+bash build.sh test --profile debug
+bash build.sh test --profile debug --modules rand
 bash build.sh coverage
 bash build.sh install --fetch-deps
 bash build.sh package rpm --fetch-deps
@@ -199,6 +200,27 @@ These scripts use isolated projects below `/tmp` and do not clean the current
 workspace's build or coverage artifacts. The RPM test requires `cpack`,
 `rpmbuild`, and `rpm`.
 
+Unit tests are split into these module-level CTest targets:
+
+```text
+cdf_ut_base_utils
+cdf_ut_cryption
+cdf_ut_key_management
+cdf_ut_authorization
+cdf_ut_authentication_jwt
+cdf_ut_authentication_kerberos
+cdf_ut_rand
+cdf_ut_psk_management
+cdf_ut_cli
+```
+
+`deploy_verify_rand` is the Rand integration test. During development, run a
+single target with:
+
+```bash
+ctest --test-dir build/debug -R '^cdf_ut_cli$' --output-on-failure
+```
+
 ## Third-party Dependencies
 
 By default, builds use pre-provisioned sources under `external/` or system
@@ -225,7 +247,8 @@ flags, and their headers are treated as system includes.
 | ASan | `build/asan/bin`, `build/asan/<libdir>` |
 | Coverage build | `build/coverage/bin`, `build/coverage/<libdir>` |
 | Coverage HTML | `build/coverage/report/total.html` |
-| Coverage XML/text | `build/coverage/report/coverage.xml`, `coverage.txt` |
+| Coverage XML | `build/coverage/report/coverage.xml` |
+| Coverage text | `build/coverage/report/coverage.txt` |
 | Fuzz | `build/fuzz/bin`, `build/fuzz/<libdir>` |
 | Default install staging | `output/cdf` |
 | RPM | `package/rpm/*.rpm` |
@@ -242,8 +265,10 @@ sudo rpm -ivh --nodeps package/rpm/cdf-crypto-*.rpm
 ```
 
 Coverage supports GCC-generated coverage data only; Clang/llvm-cov is not
-supported. Coverage colors use line thresholds 90/70 and branch thresholds
-60/40.
+supported. It covers the complete `src/cdf/**` tree. Lines 70% and Branches
+50% are quality targets, not CI failure thresholds enforced with
+`--fail-under-line` or `--fail-under-branch`. Coverage colors use line
+thresholds 90/70 and branch thresholds 60/50.
 
 ## Cleaning
 
