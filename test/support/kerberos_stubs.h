@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "cdf/connector/krb5_wrapper.h"
+#include "cdf/modules/authentication/kerberos/krb_ctx.h"
 
 namespace cdf::test {
 
@@ -42,6 +43,7 @@ struct KerberosStubState {
     OM_uint32 gssAcquireCredMajor = GSS_S_COMPLETE;
     OM_uint32 gssInitContextMajor = GSS_S_COMPLETE;
     OM_uint32 gssAcceptContextMajor = GSS_S_COMPLETE;
+    int failImportNameOnCall = 0;
 
     int initContextCalls = 0;
     int parseNameCalls = 0;
@@ -78,6 +80,8 @@ struct KerberosStubState {
 
     void Reset();
 };
+
+KeytabValue MakeMinimalKeytab();
 
 class KerberosApiScope {
 public:

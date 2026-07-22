@@ -51,6 +51,20 @@ void ClearKeytabEntry(krb5_keytab_entry *entry)
     entry->key.contents = nullptr;
 }
 
+void AppendU16(std::string &output, uint16_t value)
+{
+    output.push_back(static_cast<char>((value >> 8U) & 0xffU));
+    output.push_back(static_cast<char>(value & 0xffU));
+}
+
+void AppendU32(std::string &output, uint32_t value)
+{
+    output.push_back(static_cast<char>((value >> 24U) & 0xffU));
+    output.push_back(static_cast<char>((value >> 16U) & 0xffU));
+    output.push_back(static_cast<char>((value >> 8U) & 0xffU));
+    output.push_back(static_cast<char>(value & 0xffU));
+}
+
 krb5_error_code StubInitContext(krb5_context *context)
 {
     auto &state = ActiveState();
@@ -268,13 +282,16 @@ OM_uint32 StubAcceptContext(OM_uint32 *minor, gss_ctx_id_t *context, gss_cred_id
     if (minor != nullptr) {
         *minor = 0;
     }
-    if (context != nullptr) {
+    if ((state.gssAcceptContextMajor == GSS_S_COMPLETE || state.gssAcceptContextMajor == GSS_S_CONTINUE_NEEDED) &&
+        context != nullptr) {
         *context = Sentinel<gss_ctx_id_t>(0x203);
     }
     if (source != nullptr) {
         *source = Sentinel<gss_name_t>(0x201);
     }
-    SetOutputToken(state, output);
+    if (state.gssAcceptContextMajor == GSS_S_COMPLETE || state.gssAcceptContextMajor == GSS_S_CONTINUE_NEEDED) {
+        SetOutputToken(state, output);
+    }
     return state.gssAcceptContextMajor;
 }
 
@@ -294,13 +311,17 @@ OM_uint32 StubImportName(OM_uint32 *minor, gss_buffer_t, gss_OID, gss_name_t *na
 {
     auto &state = ActiveState();
     ++state.importNameCalls;
+    OM_uint32 result = state.gssImportNameMajor;
+    if (state.failImportNameOnCall > 0 && state.importNameCalls != state.failImportNameOnCall) {
+        result = GSS_S_COMPLETE;
+    }
     if (minor != nullptr) {
         *minor = 0;
     }
-    if (name != nullptr) {
+    if (result == GSS_S_COMPLETE && name != nullptr) {
         *name = Sentinel<gss_name_t>(0x201);
     }
-    return state.gssImportNameMajor;
+    return result;
 }
 
 OM_uint32 StubAcquireCredential(OM_uint32 *minor, gss_name_t, OM_uint32, gss_OID_set, gss_cred_usage_t,
@@ -311,7 +332,7 @@ OM_uint32 StubAcquireCredential(OM_uint32 *minor, gss_name_t, OM_uint32, gss_OID
     if (minor != nullptr) {
         *minor = 0;
     }
-    if (credential != nullptr) {
+    if (state.gssAcquireCredMajor == GSS_S_COMPLETE && credential != nullptr) {
         *credential = Sentinel<gss_cred_id_t>(0x204);
     }
     return state.gssAcquireCredMajor;
@@ -326,10 +347,13 @@ OM_uint32 StubInitSecurityContext(OM_uint32 *minor, gss_cred_id_t, gss_ctx_id_t 
     if (minor != nullptr) {
         *minor = 0;
     }
-    if (context != nullptr) {
+    if ((state.gssInitContextMajor == GSS_S_COMPLETE || state.gssInitContextMajor == GSS_S_CONTINUE_NEEDED) &&
+        context != nullptr) {
         *context = Sentinel<gss_ctx_id_t>(0x203);
     }
-    SetOutputToken(state, output);
+    if (state.gssInitContextMajor == GSS_S_COMPLETE || state.gssInitContextMajor == GSS_S_CONTINUE_NEEDED) {
+        SetOutputToken(state, output);
+    }
     return state.gssInitContextMajor;
 }
 
@@ -365,6 +389,28 @@ krb5_error_code StubFreeKeytabEntryContents(krb5_context, krb5_keytab_entry *ent
 }
 
 } // namespace
+
+KeytabValue MakeMinimalKeytab()
+{
+    std::string entry;
+    AppendU16(entry, 1);
+    AppendU16(entry, 11);
+    entry += "EXAMPLE.COM";
+    AppendU16(entry, 4);
+    entry += "user";
+    AppendU32(entry, 1);
+    AppendU32(entry, 1);
+    entry.push_back(1);
+    AppendU16(entry, 17);
+    AppendU16(entry, 4);
+    entry.append("key!", 4);
+
+    KeytabValue keytab;
+    AppendU16(keytab.buf, 0x0502);
+    AppendU32(keytab.buf, static_cast<uint32_t>(entry.size()));
+    keytab.buf += entry;
+    return keytab;
+}
 
 void KerberosStubState::Reset()
 {

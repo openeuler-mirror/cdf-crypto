@@ -11,8 +11,6 @@
  * See the Mulan PSL v2 for more details.
  */
 
-#include <arpa/inet.h>
-
 #include <cstring>
 #include <string>
 
@@ -750,40 +748,6 @@ TEST_F(TestCDFAuthenticationKrb, DISABLED_ServerAuth_ServerCredOutIsNull)
 }
 
 namespace {
-
-void AppendU16(std::string &output, uint16_t value)
-{
-    value = htons(value);
-    output.append(reinterpret_cast<const char *>(&value), sizeof(value));
-}
-
-void AppendU32(std::string &output, uint32_t value)
-{
-    value = htonl(value);
-    output.append(reinterpret_cast<const char *>(&value), sizeof(value));
-}
-
-KeytabValue MakeMinimalKeytab()
-{
-    std::string entry;
-    AppendU16(entry, 1);
-    AppendU16(entry, 11);
-    entry += "EXAMPLE.COM";
-    AppendU16(entry, 4);
-    entry += "user";
-    AppendU32(entry, 1);
-    AppendU32(entry, 1);
-    entry.push_back(1);
-    AppendU16(entry, 17);
-    AppendU16(entry, 4);
-    entry.append("key!", 4);
-
-    KeytabValue keytab;
-    AppendU16(keytab.buf, 0x0502);
-    AppendU32(keytab.buf, static_cast<uint32_t>(entry.size()));
-    keytab.buf += entry;
-    return keytab;
-}
 
 void ExpectError(const KrbResult &result, const std::string &message)
 {

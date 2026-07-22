@@ -118,9 +118,9 @@ public:
             return {{1, "Client has already been inited"}, {}};
         }
 
-        majorStatus = gss_init_sec_context(&minorStatus, clientCredentials_, &gssClientContext_, gssServiceName_,
-                                           GSS_C_NULL_OID, requestedFlags, GSS_C_INDEFINITE, nullptr, inputTokenPtr,
-                                           nullptr, &outputToken, &actualFlags, nullptr);
+        majorStatus = Krb5Wrapper::gss_init_sec_context(
+            &minorStatus, clientCredentials_, &gssClientContext_, gssServiceName_, GSS_C_NULL_OID, requestedFlags,
+            GSS_C_INDEFINITE, nullptr, inputTokenPtr, nullptr, &outputToken, &actualFlags, nullptr);
         if ((outputToken.length > 0) && (outputToken.value != nullptr)) {
             outCred.resize(outputToken.length);
             if (memcpy_s(outCred.data(), outCred.size(), outputToken.value, outputToken.length) != EOK) {
@@ -147,7 +147,7 @@ public:
 
     KrbResult ClientAuthServer([[maybe_unused]] int flags, char *cred, uint32_t credLen)
     {
-        if ((cred == nullptr) || (credLen == 0)) {
+        if ((cred == nullptr) || (credLen == 0) || (credLen > static_cast<uint32_t>(MAX_FILE_SIZE))) {
             auto ret = KrbResult(KrbRc::CDF_INVALID_PARAM, "ClientAuthServer parameter error");
             CCSEC_LOG_ERROR("|ClientAuthServer|END|returnF|" << ret.mMessage);
             return ret;
@@ -167,7 +167,6 @@ public:
             GSS_C_INDEFINITE, nullptr, inputTokenPtr, nullptr, &outputToken, &actualFlags, nullptr);
 
         if (clientCredentials_ != nullptr) {
-            Krb5Wrapper::gss_release_buffer(&minorStatus, &outputToken);
             Krb5Wrapper::gss_release_cred(&minorStatus, &clientCredentials_);
         }
         if (majorStatus == GSS_S_CONTINUE_NEEDED) {
@@ -238,7 +237,7 @@ private:
             CleanupBuffer(clientNameBuffer);
             std::string errMsg = "gss_import_name(inClientName) Failed";
             CCSEC_LOG_ERROR("|ClientInitClient|END|returnF|" << errMsg);
-            return {minorStatus != 0U ? minorStatus : majorStatus, errMsg};
+            return {KrbRc::CDF_ERROR, errMsg};
         }
 
         majorStatus = Krb5Wrapper::gss_acquire_cred(&minorStatus, gssClientName_, timeReq, nullptr, GSS_C_INITIATE,
@@ -249,7 +248,7 @@ private:
             CleanupBuffer(clientNameBuffer);
             std::string errMsg = "gss_acquire_cred Failed";
             CCSEC_LOG_ERROR("|ClientInitClient|END|returnF|" << errMsg);
-            return {minorStatus != 0U ? minorStatus : majorStatus, errMsg};
+            return {KrbRc::CDF_ERROR, errMsg};
         }
         CleanupBuffer(clientNameBuffer);
         CCSEC_LOG_INFO("|ClientInitClient|END|returnS|ClientInitClient Succeed");
@@ -319,7 +318,7 @@ private:
             free(serverNameBuffer.value);
             serverNameBuffer.value = nullptr;
             serverNameBuffer.length = 0;
-            return {minorStatus != 0U ? minorStatus : majorStatus, errMsg};
+            return {KrbRc::CDF_ERROR, errMsg};
         }
         free(serverNameBuffer.value);
         serverNameBuffer.value = nullptr;
