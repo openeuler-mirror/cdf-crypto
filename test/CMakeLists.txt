@@ -108,9 +108,13 @@ if(ENABLE_MODULE_CLI_TOOL OR ENABLE_ALL_MODULES)
     cdf_add_unit_test(cdf_ut_cli SOURCES
         unit/cli/test_config_handler.cpp
         unit/cli/test_cmd.cpp
+        unit/cli/test_cryption_tool.cpp
+        unit/cli/test_kmc_cmd.cpp
         ${PROJECT_SOURCE_DIR}/src/cdf/cli/cmd.cpp
         ${PROJECT_SOURCE_DIR}/src/cdf/cli/config_handler.cpp
+        ${PROJECT_SOURCE_DIR}/src/cdf/cli/cryption_tool.cpp
         ${PROJECT_SOURCE_DIR}/src/cdf/cli/kmc_cmd.cpp
+        DEFINITIONS __UNIT_TEST__
     )
 endif()
 
