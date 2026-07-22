@@ -18,183 +18,142 @@
 #include "gtest/gtest.h"
 
 #include "cdf/cli/config_handler.h"
+#include "temp_directory.h"
+
+namespace cdf {
+CryptionToolRc ConfigKMC(const rapidjson::Document &configDoc, CliConfig &cfg);
+}
 
 namespace cdf::test {
 
-class TestCDFCli : public ::testing::Test {
-protected:
-    void SetUp() override
-    {
-        // Create temporary directory for test files
-        testDir_ = std::filesystem::temp_directory_path() / "cdf_cli_test";
-        std::filesystem::create_directories(testDir_);
-    }
-
-    void TearDown() override
-    {
-        // Clean up temporary files
-        std::filesystem::remove_all(testDir_);
-    }
-
-    std::filesystem::path testDir_;
-};
-
-TEST_F(TestCDFCli, CheckConfig_ValidAlgorithm_AES256_GCM)
+rapidjson::Document ParseConfig(const char *json)
 {
-    CliConfig cfg;
-    cfg.algorithm = "AES256_GCM";
-    cfg.kmcType = "";  // Empty means use local KMC
-
-    auto ret = CheckConfig(cfg);
-    // Will fail because kmcType != "kmc", so it checks thirdKmc.kmcPath which is empty
-    EXPECT_EQ(ret, CryptionToolRc::INTERNAL_ERROR);
+    rapidjson::Document document;
+    document.Parse(json);
+    return document;
 }
 
-TEST_F(TestCDFCli, CheckConfig_ValidAlgorithm_CHACHA20_POLY1305)
+TEST(ConfigKmcTest, RejectsNonStringAlgorithm)
 {
-    CliConfig cfg;
-    cfg.algorithm = "CHACHA20_POLY1305";
-    cfg.kmcType = "";
+    auto document = ParseConfig(R"({"algorithm":1,"keyManagerType":"openbao"})");
+    ASSERT_FALSE(document.HasParseError());
+    CliConfig config;
 
-    auto ret = CheckConfig(cfg);
-    EXPECT_EQ(ret, CryptionToolRc::INTERNAL_ERROR);  // Path check fails for empty kmcPath
+    EXPECT_EQ(ConfigKMC(document, config), CryptionToolRc::INTERNAL_ERROR);
 }
 
-TEST_F(TestCDFCli, CheckConfig_InvalidAlgorithm)
+TEST(ConfigKmcTest, RejectsMissingKeyManagerType)
 {
-    CliConfig cfg;
-    cfg.algorithm = "INVALID_ALGORITHM";
-    cfg.kmcType = "";
+    auto document = ParseConfig(R"({"algorithm":"AES256_GCM"})");
+    ASSERT_FALSE(document.HasParseError());
+    CliConfig config;
 
-    auto ret = CheckConfig(cfg);
-    EXPECT_EQ(ret, CryptionToolRc::INTERNAL_ERROR);
+    EXPECT_EQ(ConfigKMC(document, config), CryptionToolRc::PARAM_INVALID);
 }
 
-TEST_F(TestCDFCli, CheckConfig_EmptyAlgorithm)
+TEST(ConfigKmcTest, RejectsNonObjectThirdKeyManager)
 {
-    CliConfig cfg;
-    cfg.algorithm = "";
-    cfg.kmcType = "";
+    auto document = ParseConfig(
+        R"({"algorithm":"AES256_GCM","keyManagerType":"openbao","thirdKeyManager":[]})");
+    ASSERT_FALSE(document.HasParseError());
+    CliConfig config;
 
-    auto ret = CheckConfig(cfg);
-    // Empty algorithm is valid (uses default), but path check fails
-    EXPECT_EQ(ret, CryptionToolRc::INTERNAL_ERROR);
+    EXPECT_EQ(ConfigKMC(document, config), CryptionToolRc::INTERNAL_ERROR);
 }
 
-TEST_F(TestCDFCli, CheckConfig_ValidKmcType_Openbao)
+TEST(ConfigKmcTest, ReadsSupportedFields)
 {
-    CliConfig cfg;
-    cfg.algorithm = "AES256_GCM";
-    cfg.kmcType = "openbao";
-
-    auto ret = CheckConfig(cfg);
-    // Will fail because thirdKmc.kmcPath is empty
-    EXPECT_EQ(ret, CryptionToolRc::INTERNAL_ERROR);
-}
-
-TEST_F(TestCDFCli, CheckConfig_ValidKmcType_Vault)
-{
-    CliConfig cfg;
-    cfg.algorithm = "AES256_GCM";
-    cfg.kmcType = "vault";
-
-    auto ret = CheckConfig(cfg);
-    // Will fail because thirdKmc.kmcPath is empty
-    EXPECT_EQ(ret, CryptionToolRc::INTERNAL_ERROR);
-}
-
-TEST_F(TestCDFCli, CheckConfig_InvalidKmcType)
-{
-    CliConfig cfg;
-    cfg.algorithm = "AES256_GCM";
-    cfg.kmcType = "invalid_type";
-
-    auto ret = CheckConfig(cfg);
-    EXPECT_EQ(ret, CryptionToolRc::INTERNAL_ERROR);
-}
-
-TEST_F(TestCDFCli, CheckConfig_EmptyKmcType)
-{
-    CliConfig cfg;
-    cfg.algorithm = "AES256_GCM";
-    cfg.kmcType = "";  // Empty is valid for CDFCheckType, but CheckConfig needs "kmc"
-
-    auto ret = CheckConfig(cfg);
-    // CDFCheckType returns OK for empty, but CheckConfig checks kmcType == "kmc"
-    // which fails, then checks kmcPath which fails
-    EXPECT_EQ(ret, CryptionToolRc::INTERNAL_ERROR);
-}
-
-TEST_F(TestCDFCli, CliConfig_DefaultAlgorithm)
-{
-    CliConfig cfg;
-    EXPECT_EQ(cfg.algorithm, "AES256_GCM");
-}
-
-TEST_F(TestCDFCli, GetConfig_FileNotFound)
-{
-    CliConfig cfg;
-    auto ret = GetConfig("/nonexistent/path/config.json", cfg);
-    EXPECT_EQ(ret, CryptionToolRc::INTERNAL_ERROR);
-}
-
-TEST_F(TestCDFCli, GetConfig_InvalidJsonFile)
-{
-    // Create invalid JSON file
-    auto configPath = testDir_ / "invalid_config.json";
-    std::ofstream file(configPath);
-    file << "{ invalid json content }";
-    file.close();
-
-    CliConfig cfg;
-    auto ret = GetConfig(configPath.string(), cfg);
-    EXPECT_EQ(ret, CryptionToolRc::INTERNAL_ERROR);
-}
-
-TEST_F(TestCDFCli, GetConfig_EmptyFile)
-{
-    // Create empty file
-    auto configPath = testDir_ / "empty_config.json";
-    std::ofstream file(configPath);
-    file << "";
-    file.close();
-
-    CliConfig cfg;
-    auto ret = GetConfig(configPath.string(), cfg);
-    EXPECT_EQ(ret, CryptionToolRc::INTERNAL_ERROR);
-}
-
-TEST_F(TestCDFCli, GetConfig_MinimalValidConfig)
-{
-    // Create minimal valid config
-    auto configPath = testDir_ / "minimal_config.json";
-    std::ofstream file(configPath);
-    file << R"({"algorithm":"AES256_GCM"})";
-    file.close();
-
-    CliConfig cfg;
-    auto ret = GetConfig(configPath.string(), cfg);
-    (void)ret;  // Result depends on logger initialization, just testing parsing logic
-}
-
-TEST_F(TestCDFCli, GetConfig_ConfigWithThirdKmc)
-{
-    // Create config with third party KMC
-    auto configPath = testDir_ / "third_kmc_config.json";
-    std::ofstream file(configPath);
-    file << R"({
-        "algorithm": "AES256_GCM",
-        "thirdKeyManager": {
-            "keyManagerType": "openbao",
-            "keyManagerPath": "/usr/local/bin/openbao",
-            "keyManagerAddr": "https://localhost:8200"
+    auto document = ParseConfig(R"({
+        "algorithm":"CHACHA20_POLY1305",
+        "keyManagerType":"vault",
+        "thirdKeyManager":{
+            "keyManagerPath":"/usr/bin/vault",
+            "keyManagerAddr":"https://127.0.0.1:8200"
         }
-    })";
-    file.close();
+    })");
+    ASSERT_FALSE(document.HasParseError());
+    CliConfig config;
 
-    CliConfig cfg;
-    auto ret = GetConfig(configPath.string(), cfg);
-    (void)ret;  // Result depends on logger initialization, just testing parsing logic
+    ASSERT_EQ(ConfigKMC(document, config), CryptionToolRc::OK);
+    EXPECT_EQ(config.algorithm, "CHACHA20_POLY1305");
+    EXPECT_EQ(config.kmcType, "vault");
+    EXPECT_EQ(config.thirdKmc.kmcPath, "/usr/bin/vault");
+    EXPECT_EQ(config.thirdKmc.kmcAddr, "https://127.0.0.1:8200");
+}
+
+TEST(CheckConfigTest, RejectsUndocumentedLocalKmc)
+{
+    CliConfig config;
+    config.algorithm = "AES256_GCM";
+    config.kmcType = "kmc";
+
+    EXPECT_EQ(CheckConfig(config), CryptionToolRc::INTERNAL_ERROR);
+}
+
+TEST(CheckConfigTest, RejectsInvalidAlgorithm)
+{
+    CliConfig config;
+    config.algorithm = "INVALID_ALGORITHM";
+    config.kmcType = "kmc";
+
+    EXPECT_EQ(CheckConfig(config), CryptionToolRc::INTERNAL_ERROR);
+}
+
+TEST(CheckConfigTest, RejectsInvalidKeyManagerType)
+{
+    CliConfig config;
+    config.algorithm = "AES256_GCM";
+    config.kmcType = "invalid_type";
+
+    EXPECT_EQ(CheckConfig(config), CryptionToolRc::INTERNAL_ERROR);
+}
+
+TEST(CheckConfigTest, AcceptsExecutableOpenBaoPath)
+{
+    TempDirectory temp;
+    auto executable = temp.Path() / "bao";
+    std::ofstream(executable) << "#!/bin/sh\n";
+    std::filesystem::permissions(executable, std::filesystem::perms::owner_all,
+        std::filesystem::perm_options::replace);
+
+    CliConfig config;
+    config.algorithm = "AES256_GCM";
+    config.kmcType = "openbao";
+    config.thirdKmc.kmcPath = executable.string();
+
+    EXPECT_EQ(CheckConfig(config), CryptionToolRc::OK);
+}
+
+TEST(CheckConfigTest, RejectsRelativeOpenBaoPath)
+{
+    CliConfig config;
+    config.algorithm = "AES256_GCM";
+    config.kmcType = "openbao";
+    config.thirdKmc.kmcPath = "relative/bao";
+
+    EXPECT_EQ(CheckConfig(config), CryptionToolRc::INTERNAL_ERROR);
+}
+
+TEST(CliConfigTest, UsesAes256GcmByDefault)
+{
+    CliConfig config;
+    EXPECT_EQ(config.algorithm, "AES256_GCM");
+}
+
+TEST(GetConfigTest, RejectsMissingFile)
+{
+    CliConfig config;
+    EXPECT_EQ(GetConfig("/nonexistent/path/config.json", config), CryptionToolRc::INTERNAL_ERROR);
+}
+
+TEST(GetConfigTest, RejectsInvalidJson)
+{
+    TempDirectory temp;
+    auto configPath = temp.Path() / "invalid.json";
+    std::ofstream(configPath) << "{ invalid json content }";
+    CliConfig config;
+
+    EXPECT_EQ(GetConfig(configPath.string(), config), CryptionToolRc::INTERNAL_ERROR);
 }
 
 } // namespace cdf::test
