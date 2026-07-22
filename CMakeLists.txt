@@ -2,7 +2,7 @@
 
 cmake_minimum_required(VERSION 3.14.1)
 
-project(cdf VERSION 0.0.1 LANGUAGES C CXX)
+project(cdf VERSION 1.0.0 LANGUAGES C CXX)
 
 if(POLICY CMP0097)
   cmake_policy(SET CMP0097 NEW)

@@ -295,10 +295,6 @@ CryptionToolRc CheckConfig(CliConfig &cfg)
         return CryptionToolRc::INTERNAL_ERROR;
     }
 
-    if (cfg.kmcType == "kmc") {
-        return CryptionToolRc::OK;
-    }
-
     if (CDFCheckPath(cfg.thirdKmc.kmcPath) != CryptionToolRc::OK) {
         return CryptionToolRc::INTERNAL_ERROR;
     }
