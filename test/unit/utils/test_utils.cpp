@@ -24,6 +24,7 @@
 #include "cdf/utils/str_utils.h"
 #include "cdf/utils/time_utils.h"
 #include "cdf/base/custom_logger.h"
+#include "scoped_environment.h"
 namespace cdf::test {
 
 class TestCDFUtils : public ::testing::Test {
@@ -384,6 +385,7 @@ TEST_F(TestCDFUtils, CheckDirectoryExists_NotExist)
 
 void TestUtcToLocal(const char *utcStr, const char *expectedLocalStr)
 {
+    ScopedEnvironment timezone("TZ", "Asia/Shanghai");
     const size_t bufferSize = UTCTIME_LEN + 1;
     char buffer[bufferSize]{0};    // 初始化为零，确保初始状态安全
     std::string utcString(utcStr); // 创建string对象存储UTC字符串
@@ -512,32 +514,20 @@ TEST_F(TestCDFUtils, UtcTimeToLocal_InvalidFormat)
 
 TEST_F(TestCDFUtils, UtcTimeToLocal_CrossMonth)
 {
-    // Test crossing month boundary (late night UTC crosses to next day in local time)
-    // UTC time 16:00 on Feb 28 should become 00:00 on Feb 29 in UTC+8 timezone
-    const char *utcStr = "2024-02-28T16:00:00Z";
-    char buffer[32];
-    strcpy(buffer, utcStr);
-    uint32_t ret = UtcTimeToLocal(buffer, sizeof(buffer));
-    EXPECT_EQ(ret, 0u);
-    // Verify the output format is correct (starts with year)
-    EXPECT_EQ(buffer[0], '2');
-    EXPECT_EQ(buffer[1], '0');
-    EXPECT_EQ(buffer[2], '2');
-    EXPECT_EQ(buffer[3], '4');
+    ScopedEnvironment timezone("TZ", "Asia/Shanghai");
+    char leapDay[UTCTIME_LEN + 1] = "2024-02-29T16:00:00Z";
+
+    ASSERT_EQ(UtcTimeToLocal(leapDay, sizeof(leapDay)), 0u);
+    EXPECT_STREQ(leapDay, "2024/03/01 00:00:00 ");
 }
 
 TEST_F(TestCDFUtils, UtcTimeToLocal_CrossYear)
 {
-    // Test crossing year boundary
-    const char *utcStr = "2024-12-31T16:00:00Z";
-    char buffer[32];
-    strcpy(buffer, utcStr);
-    UtcTimeToLocal(buffer, sizeof(buffer));
-    // Should cross to Jan 1, 2025 (UTC+8 timezone)
-    EXPECT_EQ(buffer[0], '2');
-    EXPECT_EQ(buffer[1], '0');
-    EXPECT_EQ(buffer[2], '2');
-    EXPECT_EQ(buffer[3], '5');
+    ScopedEnvironment timezone("TZ", "Asia/Shanghai");
+    char yearEnd[UTCTIME_LEN + 1] = "2024-12-31T16:00:00Z";
+
+    ASSERT_EQ(UtcTimeToLocal(yearEnd, sizeof(yearEnd)), 0u);
+    EXPECT_STREQ(yearEnd, "2025/01/01 00:00:00 ");
 }
 
 } // namespace cdf::test
