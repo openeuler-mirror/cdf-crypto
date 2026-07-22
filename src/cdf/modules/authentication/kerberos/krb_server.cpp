@@ -331,7 +331,7 @@ public:
             return false;
         }
 
-        if (statBuf.st_size <= 0 || statBuf.st_size > MAX_FILE_SIZE) {
+        if (!S_ISREG(statBuf.st_mode) || statBuf.st_size <= 0 || statBuf.st_size > MAX_FILE_SIZE) {
             CCSEC_LOG_ERROR("|GetKeyTabVal|END|returnF|file size is invalid: " << statBuf.st_size);
             return false;
         }

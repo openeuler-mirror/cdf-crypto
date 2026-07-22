@@ -90,6 +90,7 @@ if(ENABLE_MODULE_AUTHENTICATION OR ENABLE_ALL_MODULES)
         support/kerberos_stubs.cpp
         unit/modules/authentication/kerberos/test_krb_client.cpp
         unit/modules/authentication/kerberos/test_krb_ctx.cpp
+        unit/modules/authentication/kerberos/test_krb_server.cpp
     )
 endif()
 
