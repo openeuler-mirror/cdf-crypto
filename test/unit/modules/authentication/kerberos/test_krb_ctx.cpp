@@ -11,6 +11,8 @@
  * See the Mulan PSL v2 for more details.
  */
 
+#include <arpa/inet.h>
+
 #include <cstring>
 #include <string>
 
@@ -21,6 +23,8 @@
 #include "cdf/modules/authentication/kerberos/krb_client.h"
 #include "cdf/modules/authentication/kerberos/krb_ctx.h"
 #include "cdf/modules/authentication/kerberos/krb_server.h"
+#include "cdf/connector/krb5_wrapper.h"
+#include "kerberos_stubs.h"
 
 namespace cdf::test {
 
@@ -745,35 +749,235 @@ TEST_F(TestCDFAuthenticationKrb, DISABLED_ServerAuth_ServerCredOutIsNull)
     EXPECT_EQ((KrbRc)ret1.mResult, KrbRc::CDF_ERROR);
 }
 
-// Stub tests for KrbCtx - testing logic without real Kerberos environment
-class TestKrbCtxStub : public ::testing::Test {
-protected:
-    void SetUp() override {}
-    void TearDown() override {}
-};
+namespace {
 
-TEST_F(TestKrbCtxStub, KrbCtx_KerberosInitKeytab_EmptyKeytab)
+void AppendU16(std::string &output, uint16_t value)
 {
-    // Test with empty keytab value
-    KrbCtx ctx;
-    KeytabValue emptyKeytab;
-    emptyKeytab.buf = "";
-
-    auto result = ctx.KerberosInitKeytab(emptyKeytab, "test@EXAMPLE.COM");
-    // Should fail because krb5_init_context will fail without krb5 library
-    EXPECT_NE(result.mResult, 0);
+    value = htons(value);
+    output.append(reinterpret_cast<const char *>(&value), sizeof(value));
 }
 
-TEST_F(TestKrbCtxStub, KrbCtx_KerberosInitCCache_EmptyKeytab)
+void AppendU32(std::string &output, uint32_t value)
 {
-    // Test with empty keytab value for CCache
-    KrbCtx ctx;
-    KeytabValue emptyKeytab;
-    emptyKeytab.buf = "";
+    value = htonl(value);
+    output.append(reinterpret_cast<const char *>(&value), sizeof(value));
+}
 
-    auto result = ctx.KerberosInitCCache(emptyKeytab, "test@EXAMPLE.COM");
-    // Should fail because krb5_init_context will fail without krb5 library
-    EXPECT_NE(result.mResult, 0);
+KeytabValue MakeMinimalKeytab()
+{
+    std::string entry;
+    AppendU16(entry, 1);
+    AppendU16(entry, 11);
+    entry += "EXAMPLE.COM";
+    AppendU16(entry, 4);
+    entry += "user";
+    AppendU32(entry, 1);
+    AppendU32(entry, 1);
+    entry.push_back(1);
+    AppendU16(entry, 17);
+    AppendU16(entry, 4);
+    entry.append("key!", 4);
+
+    KeytabValue keytab;
+    AppendU16(keytab.buf, 0x0502);
+    AppendU32(keytab.buf, static_cast<uint32_t>(entry.size()));
+    keytab.buf += entry;
+    return keytab;
+}
+
+void ExpectError(const KrbResult &result, const std::string &message)
+{
+    EXPECT_EQ(result.GetKrbRc(), KrbRc::CDF_ERROR);
+    EXPECT_EQ(result.mMessage, message);
+}
+
+} // namespace
+
+class KrbCtxLifecycleTest : public ::testing::Test {
+protected:
+    KerberosApiScope scope_;
+    KeytabValue keytab_ = MakeMinimalKeytab();
+};
+
+TEST(KrbCtxStubScope, RestoresWrappedFunctions)
+{
+    auto original = Krb5Wrapper::krb5_init_context;
+    {
+        KerberosApiScope scope;
+        EXPECT_NE(Krb5Wrapper::krb5_init_context, original);
+    }
+    EXPECT_EQ(Krb5Wrapper::krb5_init_context, original);
+}
+
+TEST_F(KrbCtxLifecycleTest, RejectsInitContextFailureWithoutContinuing)
+{
+    scope_.State().initContextRc = 1;
+    KrbCtx ctx;
+
+    auto result = ctx.KerberosInitKeytab(keytab_, "user@EXAMPLE.COM");
+
+    ExpectError(result, "krb5_init_context failed");
+    EXPECT_EQ(scope_.State().initContextCalls, 1);
+    EXPECT_EQ(scope_.State().parseNameCalls, 0);
+    EXPECT_EQ(scope_.State().freeContextCalls, 0);
+}
+
+TEST_F(KrbCtxLifecycleTest, FreesContextWhenPrincipalParsingFails)
+{
+    scope_.State().parseNameRc = 1;
+    KrbCtx ctx;
+
+    auto result = ctx.KerberosInitKeytab(keytab_, "user@EXAMPLE.COM");
+
+    ExpectError(result, "krb5_parse_name could not parse principal");
+    EXPECT_EQ(scope_.State().resolveKeytabCalls, 0);
+    EXPECT_EQ(scope_.State().freePrincipalCalls, 0);
+    EXPECT_EQ(scope_.State().freeContextCalls, 1);
+}
+
+TEST_F(KrbCtxLifecycleTest, FreesPrincipalAndContextWhenKeytabResolveFails)
+{
+    scope_.State().resolveKeytabRc = 1;
+    KrbCtx ctx;
+
+    auto result = ctx.KerberosInitKeytab(keytab_, "user@EXAMPLE.COM");
+
+    EXPECT_EQ(result.GetKrbRc(), KrbRc::CDF_ERROR);
+    EXPECT_EQ(scope_.State().addKeytabEntryCalls, 0);
+    EXPECT_EQ(scope_.State().freePrincipalCalls, 1);
+    EXPECT_EQ(scope_.State().freeContextCalls, 1);
+}
+
+TEST_F(KrbCtxLifecycleTest, CleansParsedEntryWhenKeytabAddFails)
+{
+    scope_.State().addKeytabEntryRc = 1;
+    KrbCtx ctx;
+
+    auto result = ctx.KerberosInitKeytab(keytab_, "user@EXAMPLE.COM");
+
+    ExpectError(result, "krb5_kt_add_entry failed");
+    EXPECT_EQ(scope_.State().principalCompareCalls, 1);
+    EXPECT_EQ(scope_.State().addKeytabEntryCalls, 1);
+    EXPECT_EQ(scope_.State().closeKeytabCalls, 1);
+    EXPECT_EQ(scope_.State().freePrincipalCalls, 1);
+    EXPECT_EQ(scope_.State().freeContextCalls, 1);
+}
+
+TEST_F(KrbCtxLifecycleTest, InitializesAndDestroysKeytabExactlyOnce)
+{
+    KrbCtx ctx;
+    ASSERT_EQ(ctx.KerberosInitKeytab(keytab_, "user@EXAMPLE.COM").GetKrbRc(), KrbRc::CDF_OK);
+
+    EXPECT_EQ(ctx.KerberosDestroyKeytab().GetKrbRc(), KrbRc::CDF_OK);
+    EXPECT_EQ(scope_.State().removeKeytabEntryCalls, 1);
+    EXPECT_EQ(scope_.State().closeKeytabCalls, 1);
+    EXPECT_EQ(scope_.State().freePrincipalCalls, 1);
+    EXPECT_EQ(scope_.State().freeContextCalls, 1);
+
+    EXPECT_EQ(ctx.KerberosDestroyKeytab().GetKrbRc(), KrbRc::CDF_OK);
+    EXPECT_EQ(scope_.State().removeKeytabEntryCalls, 1);
+    EXPECT_EQ(scope_.State().closeKeytabCalls, 1);
+}
+
+TEST_F(KrbCtxLifecycleTest, StopsAndCleansWhenDefaultCacheFails)
+{
+    scope_.State().defaultCacheRc = 1;
+    KrbCtx ctx;
+
+    auto result = ctx.KerberosInitCCache(keytab_, "user@EXAMPLE.COM");
+
+    ExpectError(result, "unable to get default credentials cache");
+    EXPECT_EQ(scope_.State().allocOptionsCalls, 0);
+    EXPECT_EQ(scope_.State().destroyCacheCalls, 1);
+    EXPECT_EQ(scope_.State().removeKeytabEntryCalls, 1);
+    EXPECT_EQ(scope_.State().freeContextCalls, 1);
+}
+
+TEST_F(KrbCtxLifecycleTest, StopsAndCleansWhenOptionAllocationFails)
+{
+    scope_.State().allocOptionsRc = 1;
+    KrbCtx ctx;
+
+    auto result = ctx.KerberosInitCCache(keytab_, "user@EXAMPLE.COM");
+
+    ExpectError(result, "unable to allocate get_init_creds_opt struct");
+    EXPECT_EQ(scope_.State().getCredentialsCalls, 0);
+    EXPECT_EQ(scope_.State().destroyCacheCalls, 1);
+    EXPECT_EQ(scope_.State().removeKeytabEntryCalls, 1);
+}
+
+TEST_F(KrbCtxLifecycleTest, StopsAndCleansWhenCredentialLookupFails)
+{
+    scope_.State().getCredentialsRc = 1;
+    KrbCtx ctx;
+
+    auto result = ctx.KerberosInitCCache(keytab_, "user@EXAMPLE.COM");
+
+    ExpectError(result, "unable to login from keytab");
+    EXPECT_EQ(scope_.State().initializeCacheCalls, 0);
+    EXPECT_EQ(scope_.State().freeCredentialContentsCalls, 1);
+    EXPECT_EQ(scope_.State().freeOptionsCalls, 1);
+    EXPECT_EQ(scope_.State().destroyCacheCalls, 1);
+}
+
+TEST_F(KrbCtxLifecycleTest, ReportsCacheInitializationFailureAndCleans)
+{
+    scope_.State().initializeCacheRc = 1;
+    KrbCtx ctx;
+
+    auto result = ctx.KerberosInitCCache(keytab_, "user@EXAMPLE.COM");
+
+    ExpectError(result, "could not init ccache");
+    EXPECT_EQ(scope_.State().storeCredentialsCalls, 0);
+    EXPECT_EQ(scope_.State().freeCredentialContentsCalls, 1);
+    EXPECT_EQ(scope_.State().freeOptionsCalls, 1);
+    EXPECT_EQ(scope_.State().destroyCacheCalls, 1);
+}
+
+TEST_F(KrbCtxLifecycleTest, ReportsCredentialStoreFailureAndCleans)
+{
+    scope_.State().storeCredentialsRc = 1;
+    KrbCtx ctx;
+
+    auto result = ctx.KerberosInitCCache(keytab_, "user@EXAMPLE.COM");
+
+    ExpectError(result, "could not store creds in cache");
+    EXPECT_EQ(scope_.State().storeCredentialsCalls, 1);
+    EXPECT_EQ(scope_.State().freeCredentialContentsCalls, 1);
+    EXPECT_EQ(scope_.State().freeOptionsCalls, 1);
+    EXPECT_EQ(scope_.State().destroyCacheCalls, 1);
+}
+
+TEST_F(KrbCtxLifecycleTest, InitializesAndDestroysCredentialCache)
+{
+    KrbCtx ctx;
+    auto result = ctx.KerberosInitCCache(keytab_, "user@EXAMPLE.COM");
+
+    ASSERT_EQ(result.GetKrbRc(), KrbRc::CDF_OK);
+    EXPECT_EQ(result.mMessage, "KerberosInitCcache Succeed");
+    EXPECT_EQ(scope_.State().getCredentialsCalls, 1);
+    EXPECT_EQ(scope_.State().initializeCacheCalls, 1);
+    EXPECT_EQ(scope_.State().storeCredentialsCalls, 1);
+    EXPECT_EQ(scope_.State().freeCredentialContentsCalls, 1);
+
+    EXPECT_EQ(ctx.KerberosDestroyCCache().GetKrbRc(), KrbRc::CDF_OK);
+    EXPECT_EQ(scope_.State().freeOptionsCalls, 1);
+    EXPECT_EQ(scope_.State().destroyCacheCalls, 1);
+    EXPECT_EQ(scope_.State().removeKeytabEntryCalls, 1);
+    EXPECT_EQ(scope_.State().freeContextCalls, 1);
+}
+
+TEST_F(KrbCtxLifecycleTest, DestroyAndUninitAreSafeBeforeInitialization)
+{
+    KrbCtx ctx;
+
+    EXPECT_EQ(ctx.KerberosDestroyKeytab().GetKrbRc(), KrbRc::CDF_OK);
+    EXPECT_EQ(ctx.KerberosDestroyCCache().GetKrbRc(), KrbRc::CDF_OK);
+    EXPECT_EQ(ctx.KerberosUninit().GetKrbRc(), KrbRc::CDF_OK);
+    EXPECT_EQ(scope_.State().freeContextCalls, 0);
+    EXPECT_EQ(scope_.State().freePrincipalCalls, 0);
+    EXPECT_EQ(scope_.State().closeKeytabCalls, 0);
+    EXPECT_EQ(scope_.State().destroyCacheCalls, 0);
 }
 
 } // namespace cdf::test

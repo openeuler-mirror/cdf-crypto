@@ -87,6 +87,7 @@ if(ENABLE_MODULE_AUTHENTICATION OR ENABLE_ALL_MODULES)
         LIBRARIES cdf_test_support
     )
     cdf_add_unit_test(cdf_ut_authentication_kerberos SOURCES
+        support/kerberos_stubs.cpp
         unit/modules/authentication/kerberos/test_krb_ctx.cpp
     )
 endif()

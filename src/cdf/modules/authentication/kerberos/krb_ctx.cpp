@@ -114,7 +114,9 @@ public:
         }
 
         Krb5Wrapper::krb5_get_init_creds_opt_free(krb5Context_, opts_);
+        opts_ = nullptr;
         Krb5Wrapper::krb5_cc_destroy(krb5Context_, ccache_);
+        ccache_ = nullptr;
         (void)KerberosDestroyKeytab();
         return credResult;
     }
