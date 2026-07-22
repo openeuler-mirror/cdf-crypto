@@ -33,7 +33,7 @@ function(cdf_configure_coverage)
     COMMAND ${GCOVR_PATH} ${common_gcovr_arguments}
             --html-medium-threshold-line 70
             --html-high-threshold-line 90
-            --html-medium-threshold-branch 40
+            --html-medium-threshold-branch 50
             --html-high-threshold-branch 60
             --html-details "${html_report}"
     COMMAND ${GCOVR_PATH} ${common_gcovr_arguments}
