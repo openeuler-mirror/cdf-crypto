@@ -46,15 +46,42 @@ std::pair<KeyManagerRC, std::string> StubRunCommandAndGetResult([[maybe_unused]]
     return {KeyManagerRC::OK, ""};
 }
 
+std::pair<KeyManagerRC, std::string> StubRunCommandAndGetResultWithData([[maybe_unused]] std::string_view exePath,
+                                                                         [[maybe_unused]] std::string_view accessToken,
+                                                                         [[maybe_unused]] std::string_view cmdArgs)
+{
+    // Return non-empty result to trigger GetJsonFieldMaxInt call
+    return {KeyManagerRC::OK, R"({"data":{"keys":{"key1":1}}})"};
+}
+
 KeyManagerRC StubGetJsonFieldIntPairVec([[maybe_unused]] const std::string &jsonStr,
                                         [[maybe_unused]] std::vector<std::pair<uint32_t, uint32_t>> &out)
 {
     return KeyManagerRC::OK;
 }
 
+KeyManagerRC StubGetJsonFieldIntPairVecWithData([[maybe_unused]] const std::string &jsonStr,
+                                                 std::vector<std::pair<uint32_t, uint32_t>> &out)
+{
+    // Add some test data to trigger GetJsonFieldMaxInt call
+    out.push_back({1, 1});
+    return KeyManagerRC::OK;
+}
+
 int StubGetJsonFieldMaxInt([[maybe_unused]] const std::string &jsonStr)
 {
     return 0;
+}
+
+int StubGetJsonFieldMaxIntError([[maybe_unused]] const std::string &jsonStr)
+{
+    return -1;
+}
+
+KeyManagerRC StubGetJsonFieldIntPairVecError([[maybe_unused]] const std::string &jsonStr,
+                                              [[maybe_unused]] std::vector<std::pair<uint32_t, uint32_t>> &out)
+{
+    return KeyManagerRC::ERROR;
 }
 
 std::string StubGetOpenbaoLastKeyAsStr([[maybe_unused]] const std::string &readResultStr)

@@ -494,4 +494,50 @@ TEST_F(TestCDFUtils, StrToLong_PositiveNumberConversion)
     EXPECT_EQ(expected, result);
 }
 
+// Additional tests for time_utils boundary conditions
+TEST_F(TestCDFUtils, UtcTimeToLocal_NullPointer)
+{
+    // Test null pointer handling
+    uint32_t ret = UtcTimeToLocal(nullptr, 0);
+    EXPECT_EQ(ret, 1u);
+}
+
+TEST_F(TestCDFUtils, UtcTimeToLocal_InvalidFormat)
+{
+    // Test invalid format handling
+    char buffer[] = "invalid_time_format";
+    uint32_t ret = UtcTimeToLocal(buffer, sizeof(buffer));
+    EXPECT_EQ(ret, 1u);
+}
+
+TEST_F(TestCDFUtils, UtcTimeToLocal_CrossMonth)
+{
+    // Test crossing month boundary (late night UTC crosses to next day in local time)
+    // UTC time 16:00 on Feb 28 should become 00:00 on Feb 29 in UTC+8 timezone
+    const char *utcStr = "2024-02-28T16:00:00Z";
+    char buffer[32];
+    strcpy(buffer, utcStr);
+    uint32_t ret = UtcTimeToLocal(buffer, sizeof(buffer));
+    EXPECT_EQ(ret, 0u);
+    // Verify the output format is correct (starts with year)
+    EXPECT_EQ(buffer[0], '2');
+    EXPECT_EQ(buffer[1], '0');
+    EXPECT_EQ(buffer[2], '2');
+    EXPECT_EQ(buffer[3], '4');
+}
+
+TEST_F(TestCDFUtils, UtcTimeToLocal_CrossYear)
+{
+    // Test crossing year boundary
+    const char *utcStr = "2024-12-31T16:00:00Z";
+    char buffer[32];
+    strcpy(buffer, utcStr);
+    UtcTimeToLocal(buffer, sizeof(buffer));
+    // Should cross to Jan 1, 2025 (UTC+8 timezone)
+    EXPECT_EQ(buffer[0], '2');
+    EXPECT_EQ(buffer[1], '0');
+    EXPECT_EQ(buffer[2], '2');
+    EXPECT_EQ(buffer[3], '5');
+}
+
 } // namespace cdf::test

@@ -42,8 +42,12 @@ cmake -S "${PROJECT_ROOT}" -B "${TEST_ROOT}/main" \
     -DENABLE_DOWNLOAD_DEPENDENCY=OFF >/dev/null
 
 ctest_output=$(cd "${TEST_ROOT}/main" && ctest -N)
-[[ "${ctest_output}" == *"cdf_ut_test_all"* ]]
+[[ "${ctest_output}" == *"cdf_ut_base_utils"* ]]
+[[ "${ctest_output}" == *"cdf_ut_rand"* ]]
 [[ "${ctest_output}" == *"deploy_verify_rand"* ]]
+[[ "${ctest_output}" != *"cdf_ut_cli"* ]]
+[[ "${ctest_output}" != *"cdf_ut_authentication"* ]]
+[[ "${ctest_output}" != *"cdf_ut_key_management"* ]]
 grep -Eq 'build_native_make_tool.*SKIP_RETURN_CODE.*77' \
     "${TEST_ROOT}/main/test/CTestTestfile.cmake"
 

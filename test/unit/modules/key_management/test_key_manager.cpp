@@ -31,6 +31,12 @@ namespace {
 constexpr int MAX_ROOT_KEY_VALID_TIME = 30 * 365;
 constexpr int MAX_MASTER_KEY_VALID_TIME = 180;
 
+// External C interface declarations
+extern "C" {
+cdf::OpenbaoKeyManager *BorrowOpenbaoKeyManager();
+cdf::VaultKeyManager *BorrowVaultKeyManager();
+}
+
 } // namespace
 
 class KeyManagerTest : public ::testing::Test {};
@@ -810,4 +816,280 @@ TEST_F(KeyManagerVaultTest, Decrypt)
     stub.Reset(GetJsonFieldMaxInt);
     stub.Reset(GetJsonFieldIntPairVec);
 }
+
+// Test cases for openbao_utils JSON parsing functions
+class OpenbaoUtilsTest : public ::testing::Test {};
+
+TEST_F(OpenbaoUtilsTest, GetJsonFieldAsStr_ValidJson)
+{
+    // Valid JSON with string keys
+    std::string jsonStr = R"({"data":{"keys":{"key1":"value1","key2":"value2"}}})";
+    auto result = GetJsonFieldAsStr(jsonStr);
+    EXPECT_EQ(result, "value2"); // Returns the last element
+}
+
+TEST_F(OpenbaoUtilsTest, GetJsonFieldAsStr_InvalidJson)
+{
+    // Invalid JSON string
+    std::string jsonStr = "invalid json";
+    auto result = GetJsonFieldAsStr(jsonStr);
+    EXPECT_TRUE(result.empty());
+}
+
+TEST_F(OpenbaoUtilsTest, GetJsonFieldAsStr_EmptyJson)
+{
+    // Empty JSON object
+    std::string jsonStr = "{}";
+    auto result = GetJsonFieldAsStr(jsonStr);
+    EXPECT_TRUE(result.empty());
+}
+
+TEST_F(OpenbaoUtilsTest, GetJsonFieldAsStr_MissingDataField)
+{
+    // JSON missing "data" field
+    std::string jsonStr = R"({"keys":{"key1":"value1"}})";
+    auto result = GetJsonFieldAsStr(jsonStr);
+    EXPECT_TRUE(result.empty());
+}
+
+TEST_F(OpenbaoUtilsTest, GetJsonFieldAsStr_MissingKeysField)
+{
+    // JSON missing "keys" field
+    std::string jsonStr = R"({"data":{"other":"value"}})";
+    auto result = GetJsonFieldAsStr(jsonStr);
+    EXPECT_TRUE(result.empty());
+}
+
+TEST_F(OpenbaoUtilsTest, GetJsonFieldAsStr_NonStringValue)
+{
+    // JSON with non-string value in keys
+    std::string jsonStr = R"({"data":{"keys":{"key1":123}}})";
+    auto result = GetJsonFieldAsStr(jsonStr);
+    EXPECT_TRUE(result.empty());
+}
+
+TEST_F(OpenbaoUtilsTest, GetJsonFieldMaxInt_ValidJson)
+{
+    // Valid JSON with integer keys
+    std::string jsonStr = R"({"data":{"keys":{"key1":1,"key2":5,"key3":3}}})";
+    auto result = GetJsonFieldMaxInt(jsonStr);
+    EXPECT_EQ(result, 5);
+}
+
+TEST_F(OpenbaoUtilsTest, GetJsonFieldMaxInt_InvalidJson)
+{
+    // Invalid JSON string
+    std::string jsonStr = "invalid json";
+    auto result = GetJsonFieldMaxInt(jsonStr);
+    EXPECT_EQ(result, -1);
+}
+
+TEST_F(OpenbaoUtilsTest, GetJsonFieldMaxInt_EmptyJson)
+{
+    // Empty JSON object
+    std::string jsonStr = "{}";
+    auto result = GetJsonFieldMaxInt(jsonStr);
+    EXPECT_EQ(result, -1);
+}
+
+TEST_F(OpenbaoUtilsTest, GetJsonFieldMaxInt_NonIntValue)
+{
+    // JSON with non-integer value
+    std::string jsonStr = R"({"data":{"keys":{"key1":"not_an_int"}}})";
+    auto result = GetJsonFieldMaxInt(jsonStr);
+    EXPECT_EQ(result, -1);
+}
+
+TEST_F(OpenbaoUtilsTest, GetJsonFieldMaxInt_SingleValue)
+{
+    // JSON with single integer value
+    std::string jsonStr = R"({"data":{"keys":{"key1":42}}})";
+    auto result = GetJsonFieldMaxInt(jsonStr);
+    EXPECT_EQ(result, 42);
+}
+
+TEST_F(OpenbaoUtilsTest, GetJsonFieldIntPairVec_ValidJson)
+{
+    // Valid JSON array with domain_key format strings (CDF{domain}_Key{key_id})
+    std::string jsonStr = R"(["CDF1_Key001","CDF1_Key002","CDF2_Key001"])";
+    std::vector<std::pair<uint32_t, uint32_t>> result;
+    auto rc = GetJsonFieldIntPairVec(jsonStr, result);
+    EXPECT_EQ(rc, KeyManagerRC::OK);
+    EXPECT_EQ(result.size(), 3u);
+    EXPECT_EQ(result[0].first, 1u);
+    EXPECT_EQ(result[0].second, 1u);
+    EXPECT_EQ(result[1].first, 1u);
+    EXPECT_EQ(result[1].second, 2u);
+    EXPECT_EQ(result[2].first, 2u);
+    EXPECT_EQ(result[2].second, 1u);
+}
+
+TEST_F(OpenbaoUtilsTest, GetJsonFieldIntPairVec_InvalidJson)
+{
+    // Invalid JSON string
+    std::string jsonStr = "invalid json";
+    std::vector<std::pair<uint32_t, uint32_t>> result;
+    auto rc = GetJsonFieldIntPairVec(jsonStr, result);
+    EXPECT_EQ(rc, KeyManagerRC::ERROR);
+    EXPECT_TRUE(result.empty());
+}
+
+TEST_F(OpenbaoUtilsTest, GetJsonFieldIntPairVec_EmptyArray)
+{
+    // Empty JSON array
+    std::string jsonStr = "[]";
+    std::vector<std::pair<uint32_t, uint32_t>> result;
+    auto rc = GetJsonFieldIntPairVec(jsonStr, result);
+    EXPECT_EQ(rc, KeyManagerRC::ERROR);
+}
+
+TEST_F(OpenbaoUtilsTest, GetJsonFieldIntPairVec_NotArray)
+{
+    // JSON is not an array
+    std::string jsonStr = R"({"key":"value"})";
+    std::vector<std::pair<uint32_t, uint32_t>> result;
+    auto rc = GetJsonFieldIntPairVec(jsonStr, result);
+    EXPECT_EQ(rc, KeyManagerRC::ERROR);
+}
+
+TEST_F(OpenbaoUtilsTest, GetJsonFieldIntPairVec_InvalidFormat)
+{
+    // JSON with invalid domain_key format (wrong format causes parsing error)
+    // StrDecodeToDomainIdKeyId returns -1 on parse error, causing ERROR return
+    std::string jsonStr = R"(["invalid_format"])";
+    std::vector<std::pair<uint32_t, uint32_t>> result;
+    auto rc = GetJsonFieldIntPairVec(jsonStr, result);
+    EXPECT_EQ(rc, KeyManagerRC::ERROR);
+}
+
+TEST_F(OpenbaoUtilsTest, GetJsonFieldIntPairVec_NonStringElement)
+{
+    // JSON array with non-string element
+    std::string jsonStr = R"([123, "CDF1_Key001"])";
+    std::vector<std::pair<uint32_t, uint32_t>> result;
+    auto rc = GetJsonFieldIntPairVec(jsonStr, result);
+    EXPECT_EQ(rc, KeyManagerRC::ERROR);
+}
+
+// Test C interface functions for key manager
+class KeyManagerCInterfaceTest : public ::testing::Test {};
+
+TEST_F(KeyManagerCInterfaceTest, BorrowKeyManager_Openbao)
+{
+    auto *km = BorrowKeyManager(KeyManagerTy::OPENBAO);
+    EXPECT_NE(km, nullptr);
+    EXPECT_EQ(km->Type(), KeyManagerTy::OPENBAO);
+    EXPECT_FALSE(km->CheckInited());
+}
+
+TEST_F(KeyManagerCInterfaceTest, BorrowKeyManager_Vault)
+{
+    auto *km = BorrowKeyManager(KeyManagerTy::VAULT);
+    EXPECT_NE(km, nullptr);
+    EXPECT_EQ(km->Type(), KeyManagerTy::VAULT);
+    EXPECT_FALSE(km->CheckInited());
+}
+
+TEST_F(KeyManagerCInterfaceTest, BorrowOpenbaoKeyManager)
+{
+    auto *km = BorrowOpenbaoKeyManager();
+    EXPECT_NE(km, nullptr);
+    EXPECT_EQ(km->Type(), KeyManagerTy::OPENBAO);
+    EXPECT_FALSE(km->CheckInited());
+}
+
+TEST_F(KeyManagerCInterfaceTest, BorrowVaultKeyManager)
+{
+    auto *km = BorrowVaultKeyManager();
+    EXPECT_NE(km, nullptr);
+    EXPECT_EQ(km->Type(), KeyManagerTy::VAULT);
+    EXPECT_FALSE(km->CheckInited());
+}
+
+// Additional tests for error handling paths
+class KeyManagerErrorHandlingTest : public ::testing::Test {
+protected:
+    Stub stub;
+    void SetUp() override
+    {
+        stub.Set(RunCommandAndGetResult, StubRunCommandAndGetResult);
+        stub.Set(GetJsonFieldMaxInt, StubGetJsonFieldMaxInt);
+        stub.Set(GetJsonFieldIntPairVec, StubGetJsonFieldIntPairVec);
+    }
+    void TearDown() override
+    {
+        stub.Reset(RunCommandAndGetResult);
+        stub.Reset(GetJsonFieldMaxInt);
+        stub.Reset(GetJsonFieldIntPairVec);
+        stub.Reset(RunCommandAndCheck);
+    }
+};
+
+TEST_F(KeyManagerErrorHandlingTest, CreateKey_RunCommandAndCheckFail)
+{
+    auto &km = OpenbaoKeyManager::GetInstance();
+    auto ret = km.Init("./", "test_token", 2);
+    EXPECT_EQ(ret, KeyManagerRC::OK);
+
+    stub.Set(RunCommandAndCheck, StubRunCommandAndCheckError);
+    auto createRet = km.CreateKey(0);
+    EXPECT_EQ(createRet.first, KeyManagerRC::ERROR);
+
+    km.UnInit();
+}
+
+TEST_F(KeyManagerErrorHandlingTest, PrepareMap_GetJsonFieldIntPairVecFail)
+{
+    auto &km = OpenbaoKeyManager::GetInstance();
+
+    stub.Set(GetJsonFieldIntPairVec, StubGetJsonFieldIntPairVecError);
+    auto ret = km.Init("./", "test_token", 2);
+    EXPECT_EQ(ret, KeyManagerRC::ERROR);
+
+    km.UnInit();
+}
+
+TEST_F(KeyManagerErrorHandlingTest, PrepareMap_GetJsonFieldMaxIntFail)
+{
+    auto &km = OpenbaoKeyManager::GetInstance();
+
+    // Return non-empty result and data, then GetJsonFieldMaxInt fails
+    stub.Set(RunCommandAndGetResult, StubRunCommandAndGetResultWithData);
+    stub.Set(GetJsonFieldIntPairVec, StubGetJsonFieldIntPairVecWithData);
+    stub.Set(GetJsonFieldMaxInt, StubGetJsonFieldMaxIntError);
+    auto ret = km.Init("./", "test_token", 2);
+    EXPECT_EQ(ret, KeyManagerRC::ERROR);
+
+    km.UnInit();
+}
+
+TEST_F(KeyManagerErrorHandlingTest, RemoveKey_NonExistentKey)
+{
+    auto &km = OpenbaoKeyManager::GetInstance();
+    auto ret = km.Init("./", "test_token", 2);
+    EXPECT_EQ(ret, KeyManagerRC::OK);
+
+    stub.Set(RunCommandAndCheck, StubRunCommandAndCheck);
+    auto removeRet = km.RemoveKey(0, 999);
+    EXPECT_EQ(removeRet, KeyManagerRC::ERROR);
+
+    km.UnInit();
+}
+
+TEST_F(KeyManagerErrorHandlingTest, DeleteAllKey_WithKeys)
+{
+    auto &km = OpenbaoKeyManager::GetInstance();
+    auto ret = km.Init("./", "test_token", 2);
+    EXPECT_EQ(ret, KeyManagerRC::OK);
+
+    stub.Set(RunCommandAndCheck, StubRunCommandAndCheck);
+    auto createRet = km.CreateKey(0);
+    EXPECT_EQ(createRet.first, KeyManagerRC::OK);
+
+    ret = km.DeleteAllKey();
+    EXPECT_EQ(ret, KeyManagerRC::OK);
+
+    km.UnInit();
+}
+
 } // namespace cdf::test

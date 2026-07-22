@@ -44,7 +44,7 @@ if ! grep -Eq -- '-isystem [^ ]*/deps/include' "${BUILD_DIR}/compile_commands.js
     exit 1
 fi
 
-for executable_target in cdf_ut_test_all deploy_verify_rand; do
+for executable_target in cdf_ut_base_utils cdf_ut_rand deploy_verify_rand; do
     link_command="${BUILD_DIR}/test/CMakeFiles/${executable_target}.dir/link.txt"
     [[ -f "${link_command}" ]] || {
         echo "missing link command for executable ${executable_target}" >&2
@@ -52,6 +52,15 @@ for executable_target in cdf_ut_test_all deploy_verify_rand; do
     }
     if ! grep -q -- '-rdynamic' "${link_command}"; then
         echo "executable ${executable_target} is missing -rdynamic" >&2
+        exit 1
+    fi
+done
+
+for unrelated_target in cdf_ut_cli cdf_ut_authentication_jwt \
+    cdf_ut_authentication_kerberos cdf_ut_authorization cdf_ut_cryption \
+    cdf_ut_key_management cdf_ut_psk_management; do
+    if [[ -d "${BUILD_DIR}/test/CMakeFiles/${unrelated_target}.dir" ]]; then
+        echo "rand-only build unexpectedly created ${unrelated_target}" >&2
         exit 1
     fi
 done

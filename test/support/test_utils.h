@@ -34,10 +34,23 @@ std::pair<KeyManagerRC, std::string> StubRunCommandAndGetResult([[maybe_unused]]
                                                                 [[maybe_unused]] std::string_view accessToken,
                                                                 [[maybe_unused]] std::string_view cmdArgs);
 
+std::pair<KeyManagerRC, std::string> StubRunCommandAndGetResultWithData([[maybe_unused]] std::string_view exePath,
+                                                                         [[maybe_unused]] std::string_view accessToken,
+                                                                         [[maybe_unused]] std::string_view cmdArgs);
+
 KeyManagerRC StubGetJsonFieldIntPairVec([[maybe_unused]] const std::string &jsonStr,
                                         [[maybe_unused]] std::vector<std::pair<uint32_t, uint32_t>> &out);
 
 int StubGetJsonFieldMaxInt([[maybe_unused]] const std::string &jsonStr);
+
+// Error-returning stub functions for testing error handling paths
+int StubGetJsonFieldMaxIntError([[maybe_unused]] const std::string &jsonStr);
+
+KeyManagerRC StubGetJsonFieldIntPairVecError([[maybe_unused]] const std::string &jsonStr,
+                                              [[maybe_unused]] std::vector<std::pair<uint32_t, uint32_t>> &out);
+
+KeyManagerRC StubGetJsonFieldIntPairVecWithData([[maybe_unused]] const std::string &jsonStr,
+                                                 std::vector<std::pair<uint32_t, uint32_t>> &out);
 
 std::string StubGetOpenbaoLastKeyAsStr([[maybe_unused]] const std::string &readResultStr);
 
