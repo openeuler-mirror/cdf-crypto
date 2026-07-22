@@ -81,6 +81,36 @@ TEST(ConfigKmcTest, ReadsSupportedFields)
     EXPECT_EQ(config.thirdKmc.kmcAddr, "https://127.0.0.1:8200");
 }
 
+TEST(ConfigKmcTest, AppliesDefaultsWhenOptionalFieldsAreMissingOrWrongType)
+{
+    auto document = ParseConfig(R"({
+        "keyManagerType":"openbao",
+        "thirdKeyManager":{"keyManagerPath":7,"keyManagerAddr":false}
+    })");
+    ASSERT_FALSE(document.HasParseError());
+    CliConfig config;
+
+    ASSERT_EQ(ConfigKMC(document, config), CryptionToolRc::OK);
+    EXPECT_EQ(config.algorithm, "AES256_GCM");
+    EXPECT_EQ(config.kmcType, "openbao");
+    EXPECT_TRUE(config.thirdKmc.kmcPath.empty());
+    EXPECT_TRUE(config.thirdKmc.kmcAddr.empty());
+
+    auto noThird = ParseConfig(R"({"algorithm":"AES128_GCM","keyManagerType":"vault"})");
+    ASSERT_EQ(ConfigKMC(noThird, config), CryptionToolRc::OK);
+    EXPECT_EQ(config.algorithm, "AES128_GCM");
+    EXPECT_EQ(config.kmcType, "vault");
+}
+
+TEST(ConfigKmcTest, LeavesTypeEmptyWhenConfiguredWithWrongJsonType)
+{
+    auto document = ParseConfig(R"({"algorithm":"AES256_GCM","keyManagerType":7})");
+    CliConfig config;
+
+    EXPECT_EQ(ConfigKMC(document, config), CryptionToolRc::OK);
+    EXPECT_TRUE(config.kmcType.empty());
+}
+
 TEST(CheckConfigTest, RejectsUndocumentedLocalKmc)
 {
     CliConfig config;
@@ -131,6 +161,44 @@ TEST(CheckConfigTest, RejectsRelativeOpenBaoPath)
     config.kmcType = "openbao";
     config.thirdKmc.kmcPath = "relative/bao";
 
+    EXPECT_EQ(CheckConfig(config), CryptionToolRc::INTERNAL_ERROR);
+}
+
+TEST(CheckConfigTest, AcceptsEveryDocumentedAlgorithmAndBackend)
+{
+    TempDirectory temp;
+    auto executable = temp.Path() / "km";
+    std::ofstream(executable) << "#!/bin/sh\n";
+    std::filesystem::permissions(executable, std::filesystem::perms::owner_all,
+        std::filesystem::perm_options::replace);
+
+    for (const char *algorithm : {"AES128_GCM", "AES256_GCM", "SM4_CTR", "AES128_CCM", "CHACHA20_POLY1305"}) {
+        for (const char *type : {"openbao", "vault"}) {
+            CliConfig config;
+            config.algorithm = algorithm;
+            config.kmcType = type;
+            config.thirdKmc.kmcPath = executable.string();
+            EXPECT_EQ(CheckConfig(config), CryptionToolRc::OK) << algorithm << '/' << type;
+        }
+    }
+}
+
+TEST(CheckConfigTest, RejectsNonExecutableDirectoryAndNormalizedPaths)
+{
+    TempDirectory temp;
+    auto plain = temp.Path() / "plain";
+    std::ofstream(plain) << "data";
+    std::filesystem::permissions(plain, std::filesystem::perms::owner_read,
+        std::filesystem::perm_options::replace);
+
+    CliConfig config;
+    config.algorithm = "AES256_GCM";
+    config.kmcType = "openbao";
+    config.thirdKmc.kmcPath = plain.string();
+    EXPECT_EQ(CheckConfig(config), CryptionToolRc::INTERNAL_ERROR);
+    config.thirdKmc.kmcPath = temp.Path().string();
+    EXPECT_EQ(CheckConfig(config), CryptionToolRc::INTERNAL_ERROR);
+    config.thirdKmc.kmcPath = temp.Path().string() + "/../missing";
     EXPECT_EQ(CheckConfig(config), CryptionToolRc::INTERNAL_ERROR);
 }
 

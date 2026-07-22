@@ -107,6 +107,7 @@ TEST(KmcCmdFileTest, DetectsRegularFilesAndSymbolicLinks)
 
     EXPECT_FALSE(IsLinkFileOrDir(regular.string()));
     EXPECT_TRUE(IsLinkFileOrDir(link.string()));
+    EXPECT_TRUE(IsLinkFileOrDir(temp.Path().string()));
 }
 
 TEST(KmcCmdFileTest, ReportsMissingAndExistingFileLengths)
@@ -130,7 +131,10 @@ TEST(KmcCmdFileTest, ReadsOnlyWhenBufferIncludesTerminatorSpace)
     ASSERT_EQ(ReadFile(file.string(), exact, sizeof(exact)), CryptionToolRc::OK);
     EXPECT_STREQ(exact, "abc");
     EXPECT_EQ(ReadFile(file.string(), shortBuffer, sizeof(shortBuffer)), CryptionToolRc::PARAM_INVALID);
+    EXPECT_EQ(ReadFile(file.string(), exact, 0), CryptionToolRc::PARAM_INVALID);
     EXPECT_EQ(ReadFile(file.string(), nullptr, sizeof(exact)), CryptionToolRc::PARAM_INVALID);
+    EXPECT_EQ(ReadFile((temp.Path() / "missing").string(), exact, sizeof(exact)),
+              CryptionToolRc::INTERNAL_ERROR);
 }
 
 TEST(KmcCmdFileTest, WritesRegularAndSymbolicLinkDestinations)
@@ -145,6 +149,7 @@ TEST(KmcCmdFileTest, WritesRegularAndSymbolicLinkDestinations)
     EXPECT_EQ(ReadText(target), "regular");
     ASSERT_EQ(WriteFile(link.string(), "through-link"), CryptionToolRc::OK);
     EXPECT_EQ(ReadText(target), "through-link");
+    EXPECT_EQ(WriteFile((temp.Path() / "missing").string(), "data"), CryptionToolRc::INTERNAL_ERROR);
 }
 
 TEST(KmcCmdInputTest, RejectsEmptyAndOverlongPasswords)
@@ -190,6 +195,27 @@ TEST(KmcCmdInputTest, ClearsBothBuffersWhenPasswordsDiffer)
     for (char value : confirmation) {
         EXPECT_EQ(value, '\0');
     }
+}
+
+TEST(KmcCmdInputTest, ClearsFirstBufferWhenConfirmationIsEmpty)
+{
+    TestableKmcCmd command;
+    char password[8] = {};
+    char confirmation[8] = {};
+    ScopedInput input("secret\n\n");
+
+    EXPECT_EQ(command.ReadEncryptContent(password, confirmation, sizeof(password)), CryptionToolRc::PARAM_INVALID);
+    for (char value : password) {
+        EXPECT_EQ(value, '\0');
+    }
+}
+
+TEST(KmcCmdHandlerTest, BaseCommandReturnsOkWithoutDispatch)
+{
+    TestableKmcCmd command;
+    CliConfig config;
+    std::vector<std::string> parameters{"ignored"};
+    EXPECT_EQ(command.HandleCmd(parameters, config), CryptionToolRc::OK);
 }
 
 TEST(KmcCmdHandlerTest, RejectsWrongParameterCounts)
@@ -238,6 +264,76 @@ TEST(KmcCmdHandlerTest, RejectsInvalidRemoveKeyId)
     std::vector<std::string> parameters{"0", "2", "invalid"};
 
     EXPECT_EQ(command.HandleCmd(parameters, config), CryptionToolRc::PARAM_INVALID);
+}
+
+TEST(KmcCmdHandlerTest, ReportsUnavailableKeyManagerAfterValidParsing)
+{
+    CliConfig config;
+    config.kmcType = "unsupported";
+    std::vector<std::string> parameters{"0", "1"};
+
+    CreateKeyCmd create;
+    EXPECT_EQ(create.HandleCmd(parameters, config), CryptionToolRc::ENCRYPT_INTERNAL_ERROR);
+    DisplaykeyCmd display;
+    EXPECT_EQ(display.HandleCmd(parameters, config), CryptionToolRc::ENCRYPT_INTERNAL_ERROR);
+    RemovekeyCmd remove;
+    std::vector<std::string> removeParameters{"0", "1", "0"};
+    EXPECT_EQ(remove.HandleCmd(removeParameters, config), CryptionToolRc::ENCRYPT_INTERNAL_ERROR);
+
+    EncryptKeyCmd encrypt;
+    {
+        ScopedInput input("secret\nsecret\n");
+        EXPECT_EQ(encrypt.HandleCmd(parameters, config), CryptionToolRc::PARAM_INVALID);
+    }
+    ReEncryptCmd reEncrypt;
+    {
+        ScopedInput input("cipher\ncipher\n");
+        EXPECT_EQ(reEncrypt.HandleCmd(parameters, config), CryptionToolRc::INTERNAL_ERROR);
+    }
+}
+
+TEST(KmcCmdHandlerTest, ReportsEmptyAccessTokenForSupportedManagers)
+{
+    std::vector<std::string> parameters{"0", "1"};
+    CliConfig openbao;
+    openbao.kmcType = "openbao";
+    CliConfig vault;
+    vault.kmcType = "vault";
+
+    CreateKeyCmd create;
+    {
+        ScopedInput input("\n");
+        EXPECT_EQ(create.HandleCmd(parameters, openbao), CryptionToolRc::ENCRYPT_INTERNAL_ERROR);
+    }
+    {
+        ScopedInput input("token\n");
+        EXPECT_EQ(create.HandleCmd(parameters, openbao), CryptionToolRc::ENCRYPT_INTERNAL_ERROR);
+    }
+    {
+        ScopedInput input(std::string(127, 'x') + "\n");
+        EXPECT_EQ(create.HandleCmd(parameters, openbao), CryptionToolRc::ENCRYPT_INTERNAL_ERROR);
+    }
+    DisplaykeyCmd display;
+    {
+        ScopedInput input("\n");
+        EXPECT_EQ(display.HandleCmd(parameters, vault), CryptionToolRc::ENCRYPT_INTERNAL_ERROR);
+    }
+    RemovekeyCmd remove;
+    std::vector<std::string> removeParameters{"0", "1", "0"};
+    {
+        ScopedInput input("\n");
+        EXPECT_EQ(remove.HandleCmd(removeParameters, openbao), CryptionToolRc::ENCRYPT_INTERNAL_ERROR);
+    }
+    EncryptKeyCmd encrypt;
+    {
+        ScopedInput input("secret\nsecret\n\n");
+        EXPECT_EQ(encrypt.HandleCmd(parameters, openbao), CryptionToolRc::PARAM_INVALID);
+    }
+    ReEncryptCmd reEncrypt;
+    {
+        ScopedInput input("cipher\ncipher\n\n");
+        EXPECT_EQ(reEncrypt.HandleCmd(parameters, vault), CryptionToolRc::INTERNAL_ERROR);
+    }
 }
 
 } // namespace cdf::test
