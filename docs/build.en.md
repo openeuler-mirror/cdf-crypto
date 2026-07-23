@@ -3,6 +3,7 @@
 ## Requirements
 
 - CMake 3.14.1 or newer;
+- the `test` and `coverage` commands require CTest 3.21 or newer;
 - GCC or Clang with C++17 support;
 - Git, GNU Make, and Perl for isolated OpenSSL source builds; downloaded
   Kerberos builds additionally require Autoconf;
@@ -200,7 +201,9 @@ These scripts use isolated projects below `/tmp` and do not clean the current
 workspace's build or coverage artifacts. The RPM test requires `cpack`,
 `rpmbuild`, and `rpm`.
 
-Unit tests are split into these module-level CTest targets:
+Unit tests are split into these module-level executable targets. Each
+GoogleTest case is registered with CTest as
+`<target>.<test-suite>.<test-case>`:
 
 ```text
 cdf_ut_base_utils
@@ -214,11 +217,17 @@ cdf_ut_psk_management
 cdf_ut_cli
 ```
 
-`deploy_verify_rand` is the Rand integration test. During development, run a
-single target with:
+`deploy_verify_rand` is the Rand integration test. During development, run all
+GoogleTest cases from one target by name prefix:
 
 ```bash
-ctest --test-dir build/debug -R '^cdf_ut_cli$' --output-on-failure
+ctest --test-dir build/debug -R '^cdf_ut_cli\.' --output-on-failure
+```
+
+The executable target label provides an equivalent selection:
+
+```bash
+ctest --test-dir build/debug -L '^cdf_ut_cli$' --output-on-failure
 ```
 
 ## Third-party Dependencies
@@ -245,13 +254,20 @@ flags, and their headers are treated as system includes.
 | Release | `build/release/bin`, `build/release/<libdir>` |
 | Debug | `build/debug/bin`, `build/debug/<libdir>` |
 | ASan | `build/asan/bin`, `build/asan/<libdir>` |
+| Test JUnit XML | `build/<profile>/Testing/test_results.xml` |
 | Coverage build | `build/coverage/bin`, `build/coverage/<libdir>` |
-| Coverage HTML | `build/coverage/report/total.html` |
+| Coverage test JUnit XML | `build/coverage/Testing/test_results.xml` |
+| Coverage HTML | `build/coverage/report/index.html` |
 | Coverage XML | `build/coverage/report/coverage.xml` |
 | Coverage text | `build/coverage/report/coverage.txt` |
 | Fuzz | `build/fuzz/bin`, `build/fuzz/<libdir>` |
 | Default install staging | `output/cdf` |
 | RPM | `package/rpm/*.rpm` |
+
+`Testing/test_results.xml` is the machine-readable test result for CI,
+`Testing/Temporary/LastTest.log` is the raw CTest log, and
+`report/coverage.xml` contains code coverage data. They are not
+interchangeable.
 
 GNUInstallDirs determines `<libdir>` through `CMAKE_INSTALL_LIBDIR`; common
 values are `lib` and `lib64`. Libraries in the install staging tree therefore

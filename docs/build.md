@@ -3,6 +3,7 @@
 ## 环境要求
 
 - CMake 3.14.1 或更高版本；
+- `test` 和 `coverage` 命令需要 CTest 3.21 或更高版本；
 - 支持 C++17 的 GCC 或 Clang；
 - Git、GNU Make 和 Perl，用于隔离构建 OpenSSL 源码；下载构建 Kerberos 还需要
   Autoconf；
@@ -185,7 +186,8 @@ bash test/cmake/test_module_matrix.sh
 这些脚本使用 `/tmp` 下的隔离工程，不会清理当前工作区的构建和覆盖率产物。
 RPM 测试需要 `cpack`、`rpmbuild` 和 `rpm`。
 
-单元测试按模块拆分为以下 CTest 目标：
+单元测试按模块拆分为以下可执行目标，每个 GoogleTest case 以
+`<目标>.<测试套件>.<用例>` 的名称独立注册到 CTest：
 
 ```text
 cdf_ut_base_utils
@@ -199,10 +201,17 @@ cdf_ut_psk_management
 cdf_ut_cli
 ```
 
-`deploy_verify_rand` 是 Rand 集成测试。开发时可只运行指定目标，例如：
+`deploy_verify_rand` 是 Rand 集成测试。开发时可通过名称前缀运行指定目标的全部
+GoogleTest case：
 
 ```bash
-ctest --test-dir build/debug -R '^cdf_ut_cli$' --output-on-failure
+ctest --test-dir build/debug -R '^cdf_ut_cli\.' --output-on-failure
+```
+
+也可以使用测试程序标签：
+
+```bash
+ctest --test-dir build/debug -L '^cdf_ut_cli$' --output-on-failure
 ```
 
 ## 第三方依赖
@@ -234,13 +243,19 @@ CDF 的 `-Werror`、Coverage、ASan 或安全加固参数。
 | Release 构建 | `build/release/bin`、`build/release/<libdir>` |
 | Debug 构建 | `build/debug/bin`、`build/debug/<libdir>` |
 | ASan 构建 | `build/asan/bin`、`build/asan/<libdir>` |
+| Test JUnit XML | `build/<profile>/Testing/test_results.xml` |
 | Coverage 构建 | `build/coverage/bin`、`build/coverage/<libdir>` |
-| Coverage HTML | `build/coverage/report/total.html` |
+| Coverage Test JUnit XML | `build/coverage/Testing/test_results.xml` |
+| Coverage HTML | `build/coverage/report/index.html` |
 | Coverage XML | `build/coverage/report/coverage.xml` |
 | Coverage 文本 | `build/coverage/report/coverage.txt` |
 | Fuzz 构建 | `build/fuzz/bin`、`build/fuzz/<libdir>` |
 | 默认安装暂存 | `output/cdf` |
 | RPM | `package/rpm/*.rpm` |
+
+`Testing/test_results.xml` 是供 CI 读取的测试执行结果，
+`Testing/Temporary/LastTest.log` 是 CTest 原始日志，`report/coverage.xml` 是代码
+覆盖率数据，三者不能互相替代。
 
 `<libdir>` 由 CMake 的 GNUInstallDirs，即 `CMAKE_INSTALL_LIBDIR` 决定，常见值为
 `lib` 或 `lib64`。安装暂存中的库相应位于 `output/cdf/<libdir>`；RPM 安装后的

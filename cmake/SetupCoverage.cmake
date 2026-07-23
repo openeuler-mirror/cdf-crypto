@@ -17,7 +17,7 @@ function(cdf_configure_coverage)
   endif()
 
   set(report_directory "${CMAKE_BINARY_DIR}/report")
-  set(html_report "${report_directory}/total.html")
+  set(html_report "${report_directory}/index.html")
   set(common_gcovr_arguments
       "${CMAKE_BINARY_DIR}"
       --root "${PROJECT_SOURCE_DIR}"

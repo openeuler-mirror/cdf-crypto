@@ -47,6 +47,9 @@ bash build.sh coverage
 bash build.sh install --fetch-deps
 bash build.sh package rpm --fetch-deps
 ```
+`test` and `coverage` require CTest 3.21 or newer and write the JUnit test
+report to `Testing/test_results.xml` below the selected build directory.
+
 Coverage supports GCC only. Reports are generated under
 `build/coverage/report/`. The current Lines 70% and Branches 50% targets are
 used for quality tracking and are not enforced as CI failure thresholds.

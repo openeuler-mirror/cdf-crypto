@@ -65,6 +65,7 @@ touch "${TEST_ROOT}/build/debug/bin/stale-test" \
 printf '%s\n' 'CMAKE_INSTALL_LIBDIR:PATH=lib64' > \
     "${TEST_ROOT}/build/debug/CMakeCache.txt"
 CDF_FAKE_CMAKE_LOG="${fake_cmake_log}" \
+CDF_FAKE_CTEST_VERSION=3.20.6 \
 PATH="${TEST_ROOT}/fake-bin:${PATH}" \
     expect_success bash "${TEST_ROOT}/build.sh" build \
         --profile debug \
@@ -97,13 +98,58 @@ fake_calls=$(<"${fake_cmake_log}")
     fail "stale library artifacts were retained"
 
 : >"${fake_cmake_log}"
+expect_failure_contains "CTest 3.21 or newer is required" \
+    env CDF_FAKE_CMAKE_LOG="${fake_cmake_log}" \
+        CDF_FAKE_CTEST_VERSION=3.20.6 \
+        PATH="${TEST_ROOT}/fake-bin:${PATH}" \
+        bash "${TEST_ROOT}/build.sh" test \
+            --profile debug --modules authorization --jobs 1
+[[ ! -s "${fake_cmake_log}" ]] ||
+    fail "an unsupported CTest version did not fail before configuration"
+
+: >"${fake_cmake_log}"
+expect_failure_contains "CTest 3.21 or newer is required" \
+    env CDF_FAKE_CMAKE_LOG="${fake_cmake_log}" \
+        CDF_FAKE_CTEST_VERSION=3.20.6 \
+        PATH="${TEST_ROOT}/fake-bin:${PATH}" \
+        bash "${TEST_ROOT}/build.sh" coverage \
+            --modules authorization --jobs 1
+[[ ! -s "${fake_cmake_log}" ]] ||
+    fail "coverage did not reject unsupported CTest before configuration"
+
+: >"${fake_cmake_log}"
 CDF_FAKE_CMAKE_LOG="${fake_cmake_log}" \
 PATH="${TEST_ROOT}/fake-bin:${PATH}" \
     expect_success bash "${TEST_ROOT}/build.sh" test \
         --profile debug --modules authorization --jobs 1 >/dev/null
 fake_calls=$(<"${fake_cmake_log}")
-[[ "${fake_calls}" == *"ctest -C Debug --output-on-failure"* ]] ||
-    fail "the Debug configuration was not forwarded to CTest"
+test_results="${TEST_ROOT}/build/debug/Testing/test_results.xml"
+[[ -s "${test_results}" ]] || fail "test did not produce JUnit XML"
+[[ "${fake_calls}" == *"ctest -C Debug --output-on-failure --output-junit Testing/test_results.xml"* ]] ||
+    fail "CTest was not asked to produce the profile JUnit report"
+
+mkdir -p "$(dirname "${test_results}")"
+printf '%s\n' stale >"${test_results}"
+expect_failure_contains "CTest did not produce a non-empty JUnit report" \
+    env CDF_FAKE_CMAKE_LOG="${fake_cmake_log}" \
+        CDF_FAKE_CTEST_WRITE_JUNIT=OFF \
+        PATH="${TEST_ROOT}/fake-bin:${PATH}" \
+        bash "${TEST_ROOT}/build.sh" test \
+            --profile debug --modules authorization --jobs 1
+[[ ! -e "${test_results}" ]] || fail "stale JUnit XML survived a test run"
+
+set +e
+CDF_FAKE_CMAKE_LOG="${fake_cmake_log}" \
+CDF_FAKE_CTEST_STATUS=7 \
+PATH="${TEST_ROOT}/fake-bin:${PATH}" \
+    bash "${TEST_ROOT}/build.sh" test \
+        --profile debug --modules authorization --jobs 1 >/dev/null 2>&1
+ctest_failure_status=$?
+set -e
+[[ ${ctest_failure_status} -eq 7 ]] ||
+    fail "build.sh did not preserve the failing CTest status"
+[[ -s "${test_results}" ]] ||
+    fail "a failing CTest run did not retain its JUnit XML"
 
 expect_failure_contains "without producing an RPM" \
     env CDF_FAKE_CMAKE_LOG="${fake_cmake_log}" \

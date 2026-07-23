@@ -21,7 +21,13 @@ touch "${COVERAGE_BUILD_DIR}/stale-coverage-marker"
 
 bash "${SHADOW_ROOT}/build.sh" coverage --modules rand --jobs 2
 [[ ! -e "${COVERAGE_BUILD_DIR}/stale-coverage-marker" ]]
-[[ -f "${COVERAGE_BUILD_DIR}/report/total.html" ]]
+TEST_RESULTS="${COVERAGE_BUILD_DIR}/Testing/test_results.xml"
+[[ -s "${TEST_RESULTS}" ]]
+grep -Fq 'name="cdf_ut_rand.RandTest.GetRand_NullBuffer_Fail"' \
+    "${TEST_RESULTS}"
+grep -Fq 'name="deploy_verify_rand"' "${TEST_RESULTS}"
+grep -Fq 'name="build_script_contract"' "${TEST_RESULTS}"
+[[ -f "${COVERAGE_BUILD_DIR}/report/index.html" ]]
 [[ -f "${COVERAGE_BUILD_DIR}/report/coverage.xml" ]]
 [[ -f "${COVERAGE_BUILD_DIR}/report/coverage.txt" ]]
 grep -q '<coverage ' "${COVERAGE_BUILD_DIR}/report/coverage.xml"

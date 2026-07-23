@@ -12,6 +12,7 @@ set(CDF_TEST_ENVIRONMENT
 # Declare CDF unit tests
 # --------------------------
 include(CMakeParseArguments)
+include(GoogleTest)
 
 function(cdf_add_unit_test name)
     set(multi_value_args SOURCES DEFINITIONS LIBRARIES)
@@ -33,10 +34,14 @@ function(cdf_add_unit_test name)
         target_compile_definitions(${name} PRIVATE ${CDF_TEST_DEFINITIONS})
     endif()
 
-    add_test(NAME ${name} COMMAND ${name})
-    set_tests_properties(${name} PROPERTIES
+    gtest_add_tests(
+        TARGET ${name}
+        TEST_PREFIX "${name}."
+        TEST_LIST unit_test_cases
+    )
+    set_tests_properties(${unit_test_cases} PROPERTIES
         ENVIRONMENT "${CDF_TEST_ENVIRONMENT}"
-        LABELS "unit"
+        LABELS "unit;${name}"
     )
 endfunction()
 

@@ -256,6 +256,28 @@ validate_options() {
     fi
 }
 
+require_ctest_junit_support() {
+    if ! command -v ctest >/dev/null 2>&1; then
+        die "CTest is required for command '${COMMAND}'"
+    fi
+
+    local version_output
+    version_output=$(ctest --version 2>/dev/null) ||
+        die "Unable to determine the CTest version for command '${COMMAND}'"
+
+    local version
+    version=$(sed -n '1{s/^ctest version //p;q;}' <<<"${version_output}")
+    if [[ ! "${version}" =~ ^([0-9]+)\.([0-9]+)(\.[0-9]+)?([-.+].*)?$ ]]; then
+        die "Unable to parse CTest version '${version}' for command '${COMMAND}'"
+    fi
+
+    local major=${BASH_REMATCH[1]}
+    local minor=${BASH_REMATCH[2]}
+    if ((major < 3 || (major == 3 && minor < 21))); then
+        die "CTest 3.21 or newer is required to generate JUnit XML; found ${version}"
+    fi
+}
+
 detect_jobs() {
     if [[ -n "${JOBS}" ]]; then
         return
@@ -402,7 +424,21 @@ build_project() {
 }
 
 run_ctest() {
-    (cd "${BUILD_DIR}" && ctest -C "${CMAKE_BUILD_TYPE}" --output-on-failure)
+    local report_directory="${BUILD_DIR}/Testing"
+    local report_path="${report_directory}/test_results.xml"
+    local report_relative_path="Testing/test_results.xml"
+
+    mkdir -p "${report_directory}"
+    rm -f -- "${report_path}"
+
+    local ctest_status=0
+    (cd "${BUILD_DIR}" &&
+        ctest -C "${CMAKE_BUILD_TYPE}" --output-on-failure \
+            --output-junit "${report_relative_path}") || ctest_status=$?
+
+    [[ -s "${report_path}" ]] ||
+        die "CTest did not produce a non-empty JUnit report at '${report_path}'"
+    return "${ctest_status}"
 }
 
 install_project() {
@@ -482,6 +518,10 @@ main() {
     if [[ "${COMMAND}" == "clean" ]]; then
         clean_generated "${CLEAN_SCOPE}"
         return
+    fi
+
+    if [[ "${COMMAND}" == "test" || "${COMMAND}" == "coverage" ]]; then
+        require_ctest_junit_support
     fi
 
     detect_jobs

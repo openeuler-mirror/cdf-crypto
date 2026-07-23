@@ -57,6 +57,9 @@ bash build.sh install --fetch-deps
 bash build.sh package rpm --fetch-deps
 ```
 
+`test` 和 `coverage` 要求 CTest 3.21 或更高版本，并在对应构建目录的
+`Testing/test_results.xml` 生成 JUnit 测试报告。
+
 Coverage 仅支持 GCC，报告位于 `build/coverage/report/`。当前覆盖率目标为
 Lines 70%、Branches 50%，仅用于质量跟踪，不作为持续集成硬门槛。
 
