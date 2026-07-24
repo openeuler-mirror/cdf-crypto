@@ -63,24 +63,24 @@ std::pair<KeyManagerRC, std::vector<std::byte>> StubEncrypt([[maybe_unused]] con
 }
 
 std::pair<KeyManagerRC, std::vector<std::byte>> StubEncrypt2([[maybe_unused]] const CryptoSymAlg &symAlg,
-                                                            [[maybe_unused]] uint32_t domainId,
-                                                            [[maybe_unused]] std::string_view plaintext)
+                                                             [[maybe_unused]] uint32_t domainId,
+                                                             [[maybe_unused]] std::string_view plaintext)
 {
     std::vector<std::byte> vec(64, std::byte(1));
     return {KeyManagerRC::OK, vec};
 }
 
 std::pair<KeyManagerRC, std::vector<std::byte>> StubDecrypt([[maybe_unused]] const CryptoSymAlg &alg,
-                                                          [[maybe_unused]] uint32_t domainId,
-                                                          [[maybe_unused]] std::string_view ciphertext)
+                                                            [[maybe_unused]] uint32_t domainId,
+                                                            [[maybe_unused]] std::string_view ciphertext)
 {
     std::vector<std::byte> vec(64);
     return {KeyManagerRC::OK, vec};
 }
 
 std::pair<KeyManagerRC, std::vector<std::byte>> StubDecrypt2([[maybe_unused]] const CryptoSymAlg &alg,
-                                                            [[maybe_unused]] uint32_t domainId,
-                                                            [[maybe_unused]] std::string_view ciphertext)
+                                                             [[maybe_unused]] uint32_t domainId,
+                                                             [[maybe_unused]] std::string_view ciphertext)
 {
     std::vector<std::byte> vec(64, std::byte(1));
     return {KeyManagerRC::OK, vec};

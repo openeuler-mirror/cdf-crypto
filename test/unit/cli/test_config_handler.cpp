@@ -85,7 +85,7 @@ TEST(ConfigKmcTest, AppliesDefaultsWhenOptionalFieldsAreMissingOrWrongType)
 {
     auto document = ParseConfig(R"({
         "keyManagerType":"openbao",
-        "thirdKeyManager":{"keyManagerPath":7,"keyManagerAddr":false}
+        "thirdKeyManager":{"keyManagerPath":7, "keyManagerAddr":false}
     })");
     ASSERT_FALSE(document.HasParseError());
     CliConfig config;

@@ -61,7 +61,7 @@ KeyManagerRC StubGetJsonFieldIntPairVec([[maybe_unused]] const std::string &json
 }
 
 KeyManagerRC StubGetJsonFieldIntPairVecWithData([[maybe_unused]] const std::string &jsonStr,
-                                                 std::vector<std::pair<uint32_t, uint32_t>> &out)
+                                                std::vector<std::pair<uint32_t, uint32_t>> &out)
 {
     // Add some test data to trigger GetJsonFieldMaxInt call
     out.push_back({1, 1});
@@ -79,7 +79,7 @@ int StubGetJsonFieldMaxIntError([[maybe_unused]] const std::string &jsonStr)
 }
 
 KeyManagerRC StubGetJsonFieldIntPairVecError([[maybe_unused]] const std::string &jsonStr,
-                                              [[maybe_unused]] std::vector<std::pair<uint32_t, uint32_t>> &out)
+                                             [[maybe_unused]] std::vector<std::pair<uint32_t, uint32_t>> &out)
 {
     return KeyManagerRC::ERROR;
 }

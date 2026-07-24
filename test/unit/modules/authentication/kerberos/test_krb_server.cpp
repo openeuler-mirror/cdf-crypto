@@ -70,10 +70,12 @@ TEST_F(KrbServerTest, RejectsEmptyAndDirectoryKeytabs)
 
 TEST_F(KrbServerTest, InitializesAndCleansGssResources)
 {
-    { KrbServer server;
-      ASSERT_EQ(Init(server).GetKrbRc(), KrbRc::CDF_OK);
-      EXPECT_EQ(scope_.State().importNameCalls, 1);
-      EXPECT_EQ(scope_.State().acquireCredentialCalls, 1); }
+    {
+        KrbServer server;
+        ASSERT_EQ(Init(server).GetKrbRc(), KrbRc::CDF_OK);
+        EXPECT_EQ(scope_.State().importNameCalls, 1);
+        EXPECT_EQ(scope_.State().acquireCredentialCalls, 1);
+    }
     EXPECT_EQ(scope_.State().releaseNameCalls, 1);
     EXPECT_EQ(scope_.State().releaseCredentialCalls, 1);
 }
@@ -113,7 +115,8 @@ TEST_F(KrbServerTest, HandlesAcceptAndPrincipalFailures)
 {
     KrbServer server;
     ASSERT_TRUE(Init(server).OK());
-    char *output = nullptr; uint32_t length = 0;
+    char *output = nullptr;
+    uint32_t length = 0;
     scope_.State().outputToken = {std::byte{0x01}};
     scope_.State().gssAcceptContextMajor = GSS_S_CONTINUE_NEEDED;
     EXPECT_FALSE(server.ServerAuth(0, "cred", &output, &length).OK());

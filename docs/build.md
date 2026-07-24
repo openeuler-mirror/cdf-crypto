@@ -12,7 +12,8 @@
 - libboundscheck、RapidJSON 和 Kerberos 使用系统开发包，或者通过
   `--fetch-deps` 下载；
 - 测试需要 `external/gtest` 源码，或者使用 `--fetch-deps` 下载 GTest；
-- Coverage 仅支持 GCC，需要与 GCC 版本匹配的 GNU gcov 和 gcovr；
+- Coverage 仅支持 GCC，需要与 GCC 版本匹配的 GNU gcov，以及 lcov 包提供的
+  lcov 和 genhtml；
 - RPM 打包需要 CPack 和 rpmbuild。
 
 ## 快速开始
@@ -247,14 +248,13 @@ CDF 的 `-Werror`、Coverage、ASan 或安全加固参数。
 | Coverage 构建 | `build/coverage/bin`、`build/coverage/<libdir>` |
 | Coverage Test JUnit XML | `build/coverage/Testing/test_results.xml` |
 | Coverage HTML | `build/coverage/report/index.html` |
-| Coverage XML | `build/coverage/report/coverage.xml` |
-| Coverage 文本 | `build/coverage/report/coverage.txt` |
+| Coverage lcov 数据 | `build/coverage/report/coverage.info` |
 | Fuzz 构建 | `build/fuzz/bin`、`build/fuzz/<libdir>` |
 | 默认安装暂存 | `output/cdf` |
 | RPM | `package/rpm/*.rpm` |
 
 `Testing/test_results.xml` 是供 CI 读取的测试执行结果，
-`Testing/Temporary/LastTest.log` 是 CTest 原始日志，`report/coverage.xml` 是代码
+`Testing/Temporary/LastTest.log` 是 CTest 原始日志，`report/coverage.info` 是 lcov
 覆盖率数据，三者不能互相替代。
 
 `<libdir>` 由 CMake 的 GNUInstallDirs，即 `CMAKE_INSTALL_LIBDIR` 决定，常见值为
@@ -268,11 +268,17 @@ sudo rpm -ivh --nodeps package/rpm/cdf-crypto-*.rpm
 ```
 
 Coverage 仅支持 GCC 编译器生成的覆盖率数据，不支持 Clang/llvm-cov，统计范围为
-完整的 `src/cdf/**`。Lines 70%、Branches 50% 是当前质量目标，不通过
-`--fail-under-line` 或 `--fail-under-branch` 设置为持续集成硬门槛。覆盖率报告颜色阈值：
+完整的 `src/cdf/**`。Lines 70%、Branches 50% 是当前质量目标；当前未通过
+`lcov --fail-under-lines` 或 `genhtml --criteria-script` 设置为持续集成硬门槛。覆盖率报告颜色阈值：
 
 - Lines：90% 以上绿色，70% 以上黄色，70% 以下红色；
 - Branches：60% 以上绿色，50% 以上黄色，50% 以下红色。
+
+genhtml 首页的 Legend 只显示全局颜色阈值，当前设置为 90/70；分支覆盖率仍按
+Branches 的 60/50 阈值着色。
+构建会优先使用新版 lcov/genhtml 的 `--branch-coverage` 参数；如果工具版本不支持，
+会回退到 lcov 1.x 兼容的 `--rc lcov_branch_coverage=1` 和
+`--rc genhtml_branch_coverage=1`。
 
 ## 清理
 
@@ -333,5 +339,6 @@ cmake -S . -B build/custom \
 - `Unknown command`：使用了旧命令或拼写错误，运行 `bash build.sh help`；
 - `Unknown module`：模块不在支持列表中；
 - 依赖源码不存在：准备 `external/`，或者增加 `--fetch-deps`；
-- Coverage 工具缺失：使用 GCC，并安装与 GCC 版本匹配的 GNU gcov 和 gcovr；
+- Coverage 工具缺失：使用 GCC，并安装与 GCC 版本匹配的 GNU gcov，以及 lcov
+  包提供的 lcov 和 genhtml；
 - 参数不适用于命令：根据“参数及适用范围”调整命令。

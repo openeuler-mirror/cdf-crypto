@@ -14,7 +14,7 @@
 - the GTest sources under `external/gtest` for offline tests, or
   `--fetch-deps` to download GTest;
 - Coverage supports GCC only and requires GNU gcov matching the GCC version,
-  plus gcovr;
+  plus lcov and genhtml from the lcov package;
 - CPack and rpmbuild for RPM packaging.
 
 ## Quick Start
@@ -258,15 +258,14 @@ flags, and their headers are treated as system includes.
 | Coverage build | `build/coverage/bin`, `build/coverage/<libdir>` |
 | Coverage test JUnit XML | `build/coverage/Testing/test_results.xml` |
 | Coverage HTML | `build/coverage/report/index.html` |
-| Coverage XML | `build/coverage/report/coverage.xml` |
-| Coverage text | `build/coverage/report/coverage.txt` |
+| Coverage lcov data | `build/coverage/report/coverage.info` |
 | Fuzz | `build/fuzz/bin`, `build/fuzz/<libdir>` |
 | Default install staging | `output/cdf` |
 | RPM | `package/rpm/*.rpm` |
 
 `Testing/test_results.xml` is the machine-readable test result for CI,
 `Testing/Temporary/LastTest.log` is the raw CTest log, and
-`report/coverage.xml` contains code coverage data. They are not
+`report/coverage.info` contains lcov coverage data. They are not
 interchangeable.
 
 GNUInstallDirs determines `<libdir>` through `CMAKE_INSTALL_LIBDIR`; common
@@ -282,9 +281,15 @@ sudo rpm -ivh --nodeps package/rpm/cdf-crypto-*.rpm
 
 Coverage supports GCC-generated coverage data only; Clang/llvm-cov is not
 supported. It covers the complete `src/cdf/**` tree. Lines 70% and Branches
-50% are quality targets, not CI failure thresholds enforced with
-`--fail-under-line` or `--fail-under-branch`. Coverage colors use line
-thresholds 90/70 and branch thresholds 60/50.
+50% are quality targets; they are not currently enforced as CI failure
+thresholds through `lcov --fail-under-lines` or `genhtml --criteria-script`.
+Coverage colors use line thresholds 90/70 and branch thresholds 60/50.
+The genhtml top-level Legend shows only the global 90/70 color thresholds;
+branch coverage is still colored with the branch-specific 60/50 thresholds.
+The build prefers the newer lcov/genhtml `--branch-coverage` option and falls
+back to the lcov 1.x-compatible `--rc lcov_branch_coverage=1` and
+`--rc genhtml_branch_coverage=1` form when the installed tools do not support
+that option.
 
 ## Cleaning
 
@@ -347,5 +352,5 @@ tests or downloads dependencies by default.
 - `Unknown module`: the name is not in the supported module list;
 - missing dependency source: prepare `external/` or add `--fetch-deps`;
 - missing Coverage tool: use GCC and install GNU gcov matching the GCC version,
-  plus gcovr;
+  plus lcov and genhtml from the lcov package;
 - unsupported option: consult the applicability table above.

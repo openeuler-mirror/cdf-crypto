@@ -15,29 +15,66 @@ CDF的全称是Confidential Data defensive Framework，提供敏感数据保护�
 
 1. 编译环境要求
 
-+ 编译环境要求：OpenEuler 内核版本不低于 kernel 6.6
-+ 编译环境要求：Openssl 3.0.9
++ 发布目标环境要求：OpenEuler 内核版本不低于 kernel 6.6。
++ Rand/Cryption 使用 OpenSSL 3.0.9 源码构建。离线构建需要
+  `external/openssl` 为 OpenSSL 3.0.9 Git 工作树；也可以通过
+  `--fetch-deps` 下载 OpenSSL 3.0.9。
++ 测试环境可按实际发行版安装同名或等价软件包；以下以 yum 系包名为例。
+
+基础编译工具，适用于 `build`、`test`、`coverage`、`install` 和 `package rpm`：
 
 ```
-sudo yum install -y rpm-build
 sudo yum install -y make
 sudo yum install -y cmake
 sudo yum install -y gcc
 sudo yum install -y gcc-c++
-sudo yum install -y autoconf
-sudo yum install -y automake
-sudo yum install -y bison
 sudo yum install -y perl
+sudo yum install -y git
+```
+
+系统三方开发包，适用于未使用 `--fetch-deps` 的离线构建：
+
+```
 sudo yum install -y libboundscheck
 sudo yum install -y rapidjson-devel
-sudo yum install -y openssl
-sudo yum install -y openssl-devel
 sudo yum install -y krb5-devel
 sudo yum install -y krb5-libs
+sudo yum install -y openssl
+sudo yum install -y openssl-devel
+```
+
+`--fetch-deps` 会在构建目录中下载并构建项目私有依赖，不会替代基础编译工具。
+下载构建 Kerberos 还需要 Autoconf；OpenSSL 和部分依赖构建需要 GNU Make、Perl
+和 Git：
+
+```
+sudo yum install -y autoconf
+```
+
+测试依赖：
+
+```
+# test 和 coverage 需要 CTest 3.21 或更高版本，通常随 cmake 提供。
+# 离线测试需要 external/gtest；也可以通过 --fetch-deps 下载 GTest。
+```
+
+Coverage 依赖：
+
+```
+# Coverage 仅支持 GCC。gcov 由 gcc 包提供，版本需要与 GCC 匹配。
+# 覆盖率报告由 lcov 和 genhtml 生成；genhtml 通常由 lcov 包提供。
+sudo yum install -y lcov
+```
+
+RPM 打包和 ASan/Fuzz 插桩依赖：
+
+```
+sudo yum install -y rpm-build
 sudo yum install -y libasan
 ```
 
-+ 其他依赖可通过 `--fetch-deps` 显式允许自动下载
+当前 CMake 构建路径未直接使用 `automake` 和 `bison`；仅在额外工具链或发行版打包
+流程需要时安装。
 
 2. 编译指导
 

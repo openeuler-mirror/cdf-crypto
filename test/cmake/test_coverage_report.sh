@@ -28,12 +28,24 @@ grep -Fq 'name="cdf_ut_rand.RandTest.GetRand_NullBuffer_Fail"' \
 grep -Fq 'name="deploy_verify_rand"' "${TEST_RESULTS}"
 grep -Fq 'name="build_script_contract"' "${TEST_RESULTS}"
 [[ -f "${COVERAGE_BUILD_DIR}/report/index.html" ]]
-[[ -f "${COVERAGE_BUILD_DIR}/report/coverage.xml" ]]
-[[ -f "${COVERAGE_BUILD_DIR}/report/coverage.txt" ]]
-grep -q '<coverage ' "${COVERAGE_BUILD_DIR}/report/coverage.xml"
-grep -Fq -- "--gcov-executable $(command -v gcov)" \
+grep -Fq 'low: &lt; 70 %' "${COVERAGE_BUILD_DIR}/report/index.html"
+grep -Fq 'medium: &gt;= 70 %' "${COVERAGE_BUILD_DIR}/report/index.html"
+[[ -f "${COVERAGE_BUILD_DIR}/report/coverage.info" ]]
+grep -q '^SF:' "${COVERAGE_BUILD_DIR}/report/coverage.info"
+grep -q '^BRDA:' "${COVERAGE_BUILD_DIR}/report/coverage.info"
+grep -q '^BRF:' "${COVERAGE_BUILD_DIR}/report/coverage.info"
+grep -q '^BRH:' "${COVERAGE_BUILD_DIR}/report/coverage.info"
+grep -Fq -- "--gcov-tool $(command -v gcov)" \
     "${COVERAGE_BUILD_DIR}/build.ninja" 2>/dev/null || \
-grep -Fq -- "--gcov-executable $(command -v gcov)" \
+grep -Fq -- "--gcov-tool $(command -v gcov)" \
+    "${COVERAGE_BUILD_DIR}/CMakeFiles/coverage.dir/build.make"
+grep -Fq -- "--branch-coverage" \
+    "${COVERAGE_BUILD_DIR}/build.ninja" 2>/dev/null || \
+grep -Fq -- "lcov_branch_coverage=1" \
+    "${COVERAGE_BUILD_DIR}/build.ninja" 2>/dev/null || \
+grep -Fq -- "--branch-coverage" \
+    "${COVERAGE_BUILD_DIR}/CMakeFiles/coverage.dir/build.make" || \
+grep -Fq -- "lcov_branch_coverage=1" \
     "${COVERAGE_BUILD_DIR}/CMakeFiles/coverage.dir/build.make"
 
 echo "coverage report tests passed"

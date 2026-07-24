@@ -16,6 +16,10 @@ get_target_property(link_options cdf_coverage_options
 if(NOT "--coverage" IN_LIST compile_options)
   message(FATAL_ERROR "coverage compile option is missing: ${compile_options}")
 endif()
+if(NOT "-fprofile-update=atomic" IN_LIST compile_options)
+  message(FATAL_ERROR
+          "coverage atomic profile update option is missing: ${compile_options}")
+endif()
 if(NOT "--coverage" IN_LIST link_options)
   message(FATAL_ERROR "coverage link option is missing: ${link_options}")
 endif()

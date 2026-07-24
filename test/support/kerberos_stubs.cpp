@@ -157,7 +157,7 @@ krb5_error_code StubAllocOptions(krb5_context, krb5_get_init_creds_opt **options
 }
 
 krb5_error_code StubGetCredentials(krb5_context, krb5_creds *, krb5_principal, krb5_keytab, krb5_deltat,
-                                  const char *, krb5_get_init_creds_opt *)
+                                   const char *, krb5_get_init_creds_opt *)
 {
     auto &state = ActiveState();
     ++state.getCredentialsCalls;

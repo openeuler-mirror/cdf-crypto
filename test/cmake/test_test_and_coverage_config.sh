@@ -7,11 +7,21 @@ TEST_ROOT=$(mktemp -d /tmp/cdf-test-coverage.XXXXXX)
 trap 'rm -rf "${TEST_ROOT}"' EXIT
 
 coverage_module="${PROJECT_ROOT}/cmake/SetupCoverage.cmake"
-grep -q 'gcovr is required when BUILD_COVERAGE=ON' "${coverage_module}"
+grep -q 'lcov is required when BUILD_COVERAGE=ON' "${coverage_module}"
+grep -q 'genhtml is required when BUILD_COVERAGE=ON' "${coverage_module}"
+grep -q -- '--branch-coverage' "${coverage_module}"
+grep -q 'genhtml_hi_limit=90' "${coverage_module}"
+grep -q 'genhtml_med_limit=70' "${coverage_module}"
+grep -q 'genhtml_line_hi_limit=90' "${coverage_module}"
+grep -q 'genhtml_line_med_limit=70' "${coverage_module}"
+grep -q 'genhtml_branch_hi_limit=60' "${coverage_module}"
+grep -q 'genhtml_branch_med_limit=50' "${coverage_module}"
+grep -q 'lcov_branch_coverage=1' "${coverage_module}"
+grep -q 'genhtml_branch_coverage=1' "${coverage_module}"
 grep -Fq 'Coverage 仅支持 GCC' "${PROJECT_ROOT}/docs/build.md"
 grep -Fq 'Coverage supports GCC only' "${PROJECT_ROOT}/docs/build.en.md"
-if grep -Eq 'LCOV_PATH|GENHTML_PATH|lcov|genhtml' "${coverage_module}"; then
-    echo "coverage configuration still exposes an incomplete lcov fallback" >&2
+if grep -Eq 'GCOVR_PATH|gcovr' "${coverage_module}"; then
+    echo "coverage configuration still depends on gcovr" >&2
     exit 1
 fi
 
@@ -19,13 +29,30 @@ cmake -S "${PROJECT_ROOT}/test/cmake/coverage_project" \
     -B "${TEST_ROOT}/coverage" \
     -DCDF_SOURCE_DIR="${PROJECT_ROOT}" \
     -DGCOV_PATH="$(command -v cmake)" \
-    -DGCOVR_PATH="$(command -v cmake)" >/dev/null
+    -DLCOV_PATH="$(command -v cmake)" \
+    -DGENHTML_PATH="$(command -v cmake)" >/dev/null
 
 cmake_executable=$(command -v cmake)
 grep -Fq "GCOV_PATH:FILEPATH=${cmake_executable}" \
     "${TEST_ROOT}/coverage/CMakeCache.txt"
-grep -Fq "GCOVR_PATH:FILEPATH=${cmake_executable}" \
+grep -Fq "LCOV_PATH:FILEPATH=${cmake_executable}" \
     "${TEST_ROOT}/coverage/CMakeCache.txt"
+grep -Fq "GENHTML_PATH:FILEPATH=${cmake_executable}" \
+    "${TEST_ROOT}/coverage/CMakeCache.txt"
+grep -Fq -- "--rc lcov_branch_coverage=1" \
+    "${TEST_ROOT}/coverage/CMakeFiles/coverage.dir/build.make"
+grep -Fq -- "--rc genhtml_branch_coverage=1" \
+    "${TEST_ROOT}/coverage/CMakeFiles/coverage.dir/build.make"
+if grep -Fq -- "--ignore-errors mismatch" \
+    "${TEST_ROOT}/coverage/CMakeFiles/coverage.dir/build.make"; then
+    echo "old lcov fallback still uses lcov 2.x mismatch ignore errors" >&2
+    exit 1
+fi
+if grep -Fq -- "--ignore-errors unused" \
+    "${TEST_ROOT}/coverage/CMakeFiles/coverage.dir/build.make"; then
+    echo "old lcov fallback still uses lcov 2.x unused ignore errors" >&2
+    exit 1
+fi
 
 if grep -q 'LD_PRELOAD=' "${PROJECT_ROOT}/test/CMakeLists.txt"; then
     echo "test configuration still contains an architecture-specific LD_PRELOAD" >&2
