@@ -83,6 +83,19 @@ rand_label_output=$(ctest --test-dir "${TEST_ROOT}/main" -N \
 [[ "${rand_label_output}" != *"deploy_verify_rand"* ]]
 grep -Eq 'build_native_make_tool.*SKIP_RETURN_CODE.*77' \
     "${TEST_ROOT}/main/test/CTestTestfile.cmake"
+if grep -q 'command -v ninja' "${PROJECT_ROOT}/test/cmake/test_native_make_tool.sh"; then
+    echo "native Make tool test still requires a system ninja executable" >&2
+    exit 1
+fi
+if grep -q 'ninja -C' "${PROJECT_ROOT}/test/cmake/test_native_make_tool.sh"; then
+    echo "native Make tool test still invokes a system ninja executable" >&2
+    exit 1
+fi
+if grep -q -- '-G Ninja' "${PROJECT_ROOT}/test/cmake/test_native_make_tool.sh"; then
+    echo "native Make tool test still requires the Ninja CMake generator" >&2
+    exit 1
+fi
+grep -q 'fake_make' "${PROJECT_ROOT}/test/cmake/test_native_make_tool.sh"
 
 mkdir -p "${TEST_ROOT}/without-ninja"
 ln -s "$(command -v dirname)" "${TEST_ROOT}/without-ninja/dirname"

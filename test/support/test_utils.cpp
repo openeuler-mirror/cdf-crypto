@@ -47,8 +47,8 @@ std::pair<KeyManagerRC, std::string> StubRunCommandAndGetResult([[maybe_unused]]
 }
 
 std::pair<KeyManagerRC, std::string> StubRunCommandAndGetResultWithData([[maybe_unused]] std::string_view exePath,
-                                                                         [[maybe_unused]] std::string_view accessToken,
-                                                                         [[maybe_unused]] std::string_view cmdArgs)
+                                                                        [[maybe_unused]] std::string_view accessToken,
+                                                                        [[maybe_unused]] std::string_view cmdArgs)
 {
     // Return non-empty result to trigger GetJsonFieldMaxInt call
     return {KeyManagerRC::OK, R"({"data":{"keys":{"key1":1}}})"};
