@@ -5,7 +5,7 @@
 if(NOT ENABLE_DOWNLOAD_DEPENDENCY)
   # Use system-installed rapidjson from RPM
   add_library(librapidjson INTERFACE)
-  target_include_directories(librapidjson INTERFACE /usr/include)
+  target_include_directories(librapidjson SYSTEM INTERFACE /usr/include)
   add_library(Dependency::rapidjson ALIAS librapidjson)
 else()
   ExternalProject_Add(rapidjson
@@ -19,7 +19,8 @@ else()
           -DCMAKE_SKIP_RPATH=True)
 
   add_library(librapidjson INTERFACE)
-  target_include_directories(librapidjson INTERFACE ${CMAKE_DEPENDENCY_INCLUDEDIR})
+  target_include_directories(librapidjson SYSTEM INTERFACE
+    ${CMAKE_DEPENDENCY_INCLUDEDIR})
   add_dependencies(librapidjson rapidjson)
   add_library(Dependency::rapidjson ALIAS librapidjson)
 endif()

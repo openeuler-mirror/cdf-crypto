@@ -28,7 +28,7 @@
 #include "cdf/modules/authentication/jwt/jwt_token.h"
 #include "cdf/modules/cryption/define.h"
 #include "cdf/modules/cryption/hmac.h"
-#include "cdf/modules/cryption/km_cryptor.h"
+#include "cdf/modules/key_management/km_cryptor.h"
 #include "cdf/modules/key_management/define.h"
 #include "cdf/modules/key_management/key_manager_factory.h"
 #include "cdf/utils/base64.h"

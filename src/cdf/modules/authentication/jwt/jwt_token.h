@@ -22,7 +22,7 @@
 #include "cdf/modules/authentication/jwt/define.h"
 #include "cdf/modules/authentication/jwt/option.h"
 #include "cdf/modules/cryption/define.h"
-#include "cdf/modules/cryption/km_cryptor.h"
+#include "cdf/modules/key_management/km_cryptor.h"
 #include "cdf/modules/key_management/define.h"
 
 namespace cdf {

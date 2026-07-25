@@ -10,9 +10,8 @@ set(CDF_SOURCE_FILES
     ${CDF_SOURCE_FILES}
     PARENT_SCOPE)
 
-install(
-  FILES ${CMAKE_CURRENT_LIST_DIR}/krb_client.h
-        ${CMAKE_CURRENT_LIST_DIR}/krb_server.h
-        ${CMAKE_CURRENT_LIST_DIR}/define.h
-  DESTINATION
-    ${CMAKE_INSTALL_INCLUDEDIR}/cdf/modules/authentication/kerberos)
+cdf_install_headers(
+  "${CMAKE_INSTALL_INCLUDEDIR}/cdf/modules/authentication/kerberos"
+  ${CMAKE_CURRENT_LIST_DIR}/krb_client.h
+  ${CMAKE_CURRENT_LIST_DIR}/krb_server.h
+  ${CMAKE_CURRENT_LIST_DIR}/define.h)

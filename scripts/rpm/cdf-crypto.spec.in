@@ -1,6 +1,6 @@
 # -*- rpm-spec -*-
 Name:           cdf-crypto
-Version:        0.0.1
+Version:        @PROJECT_VERSION@
 Release:        1
 Summary:        Confidential Data defensive Framework
 Summary(zh_CN): 敏感数据保护框架（CDF）
@@ -8,7 +8,10 @@ License:        MulanPSL-2.0
 URL:            https://atomgit.com/openeuler/cdf-crypto.git
 Source0:        %{name}-%{version}.tar.gz
 
-%define project_source_dir @PROJECT_SOURCE_DIR@
+%define cdf_cmake_bindir @CMAKE_INSTALL_BINDIR@
+%define cdf_cmake_includedir @CMAKE_INSTALL_INCLUDEDIR@
+%define cdf_cmake_libdir @CMAKE_INSTALL_LIBDIR@
+%define cdf_cpack_stage @PROJECT_BINARY_DIR@/cpack-staging
 
 %description
 cdf-crypto(Confidential Data defensive Framework) provides cryptographic algorithms and key security functions.
@@ -23,70 +26,51 @@ mkdir -p %{buildroot}%{_libdir}/cdf
 mkdir -p %{buildroot}%{_bindir}/cdf/config
 mkdir -p %{buildroot}%{_bindir}/cdf/bin
 
-# Move the compiled files to the package
-cp -r %{project_source_dir}/output/cdf/bin/* %{buildroot}%{_bindir}/cdf/bin
-cp -r %{project_source_dir}/output/cdf/config/* %{buildroot}%{_bindir}/cdf/config
-cp -r %{project_source_dir}/output/cdf/include/* %{buildroot}%{_includedir}/
-cp -r %{project_source_dir}/output/cdf/lib64/* %{buildroot}%{_libdir}/cdf
+# Consume only the install tree prepared by CPack. This keeps direct cpack and
+# the generated package target independent from an external install prefix.
+if [ -d "%{cdf_cpack_stage}/%{cdf_cmake_bindir}" ]; then
+    cp -a "%{cdf_cpack_stage}/%{cdf_cmake_bindir}/." %{buildroot}%{_bindir}/cdf/bin/
+fi
+if [ -d "%{cdf_cpack_stage}/config" ]; then
+    cp -a "%{cdf_cpack_stage}/config/." %{buildroot}%{_bindir}/cdf/config/
+fi
+if [ -d "%{cdf_cpack_stage}/%{cdf_cmake_includedir}/cdf" ]; then
+    cp -a "%{cdf_cpack_stage}/%{cdf_cmake_includedir}/cdf/." %{buildroot}%{_includedir}/cdf/
+fi
+if [ -d "%{cdf_cpack_stage}/%{cdf_cmake_libdir}" ]; then
+    cp -a "%{cdf_cpack_stage}/%{cdf_cmake_libdir}/." %{buildroot}%{_libdir}/cdf/
+fi
 
-find %{buildroot} -name "*.so" -exec chmod u+s {} \;
-find %{buildroot} -name "*.so.*" -exec chmod u+s {} \;
+# RPM post-processing strips binaries in buildroot and requires owner-write.
+# The final package permissions are reset by the manifest below.
+find %{buildroot}%{_libdir}/cdf -type f -exec chmod u+w {} \;
+
+# Generate the manifest from the selected modules' actual install tree.  The
+# package owns only its private directory trees, never shared system parents.
+# Doubled percent signs escape RPM macro expansion and produce file directives.
+manifest=%{_builddir}/cdf-crypto.files
+for owned_root in \
+    %{buildroot}%{_bindir}/cdf \
+    %{buildroot}%{_includedir}/cdf \
+    %{buildroot}%{_libdir}/cdf; do
+    find "${owned_root}" -type d -print
+done | sed -e 's#^%{buildroot}##' \
+           -e 's#^#%%dir %%attr(750,root,root) #' > "${manifest}"
+find %{buildroot}%{_bindir}/cdf/config -type f -print | \
+    sed -e 's#^%{buildroot}##' \
+        -e 's#^#%%config(noreplace) %%attr(640,root,root) #' >> "${manifest}"
+find %{buildroot}%{_bindir}/cdf/bin -type f -print | \
+    sed -e 's#^%{buildroot}##' \
+        -e 's#^#%%attr(750,root,root) #' >> "${manifest}"
+find %{buildroot}%{_includedir}/cdf -type f -print | \
+    sed -e 's#^%{buildroot}##' \
+        -e 's#^#%%attr(440,root,root) #' >> "${manifest}"
+find %{buildroot}%{_libdir}/cdf \( -type f -o -type l \) -print | \
+    sed -e 's#^%{buildroot}##' \
+        -e 's#^#%%attr(550,root,root) #' >> "${manifest}"
 
 %clean
 rm -rf %{buildroot}
 
-%files
+%files -f %{_builddir}/cdf-crypto.files
 %defattr(750,root,root,750)
-
-# Directory permissions settings
-%dir %attr(750, root, root) %{_bindir}/cdf/config
-%dir %attr(750, root, root) %{_includedir}/cdf
-%dir %attr(750, root, root) %{_includedir}/cdf/base
-%dir %attr(750, root, root) %{_includedir}/cdf/modules
-%dir %attr(750, root, root) %{_includedir}/cdf/modules/authentication
-%dir %attr(750, root, root) %{_includedir}/cdf/modules/authorization
-%dir %attr(750, root, root) %{_includedir}/cdf/modules/cryption
-%dir %attr(750, root, root) %{_includedir}/cdf/modules/key_management
-%dir %attr(750, root, root) %{_includedir}/cdf/modules/psk_management
-%dir %attr(750, root, root) %{_includedir}/cdf/modules/rand
-%dir %attr(750, root, root) %{_libdir}/cdf
-
-# Configuration files
-%config(noreplace) %attr(640,root,root) %{_bindir}/cdf/config/crypto_tool_config.json
-
-# Binary files
-%attr(750, root, root) %{_bindir}/cdf/bin/*
-
-# Header files
-%attr(440, root, root) %{_includedir}/cdf/base/common_define.h
-%attr(440, root, root) %{_includedir}/cdf/base/custom_logger.h
-%attr(440, root, root) %{_includedir}/cdf/modules/authentication/jwt/define.h
-%attr(440, root, root) %{_includedir}/cdf/modules/authentication/jwt/jwt_auth_server.h
-%attr(440, root, root) %{_includedir}/cdf/modules/authentication/jwt/option.h
-%attr(440, root, root) %{_includedir}/cdf/modules/authentication/kerberos/define.h
-%attr(440, root, root) %{_includedir}/cdf/modules/authentication/kerberos/krb_client.h
-%attr(440, root, root) %{_includedir}/cdf/modules/authentication/kerberos/krb_server.h
-%attr(440, root, root) %{_includedir}/cdf/modules/authorization/error_code.h
-%attr(440, root, root) %{_includedir}/cdf/modules/authorization/whitelist_authorization.h
-%attr(440, root, root) %{_includedir}/cdf/modules/cryption/define.h
-%attr(440, root, root) %{_includedir}/cdf/modules/cryption/hash.h
-%attr(440, root, root) %{_includedir}/cdf/modules/cryption/km_cryptor.h
-%attr(440, root, root) %{_includedir}/cdf/modules/cryption/native_cryptor.h
-%attr(440, root, root) %{_includedir}/cdf/modules/cryption/native_cryptor_def.h
-%attr(440, root, root) %{_includedir}/cdf/modules/key_management/openbao/openbao_key_manager.h
-%attr(440, root, root) %{_includedir}/cdf/modules/key_management/vault/vault_key_manager.h
-%attr(440, root, root) %{_includedir}/cdf/modules/key_management/define.h
-%attr(440, root, root) %{_includedir}/cdf/modules/key_management/key_manager.h
-%attr(440, root, root) %{_includedir}/cdf/modules/key_management/key_manager_factory.h
-%attr(440, root, root) %{_includedir}/cdf/modules/psk_management/psk.h
-%attr(440, root, root) %{_includedir}/cdf/modules/psk_management/psk_callback_mgr.h
-%attr(440, root, root) %{_includedir}/cdf/modules/psk_management/psk_define.h
-%attr(440, root, root) %{_includedir}/cdf/modules/psk_management/psk_manager.h
-%attr(440, root, root) %{_includedir}/cdf/modules/rand/rand.h
-
-# Library files
-%attr(550, root, root) %{_libdir}/*
-
-%doc
-
-%changelog

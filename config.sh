@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 #
 # Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
@@ -13,7 +13,9 @@
 # See the Mulan PSL v2 for more details.
 #
 
-set -e;
+set -Eeuo pipefail
 
-mkdir -p build
-cmake ..
+PROJECT_ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)
+
+echo "config.sh delegates to the supported build interface: bash build.sh build" >&2
+exec bash "${PROJECT_ROOT_DIR}/build.sh" build "$@"

@@ -9,24 +9,25 @@ add_executable(
   ${CMAKE_CURRENT_LIST_DIR}/cryption_tool.cpp
   ${CMAKE_CURRENT_LIST_DIR}/kmc_cmd.cpp)
 
+cdf_apply_project_options(crypto_tool)
+
 target_compile_options(crypto_tool PRIVATE -fvisibility=hidden)
 
 target_link_libraries(crypto_tool PUBLIC CDF::cdf Dependency::secure_c)
 
-# Add -pie flag for security (only for executable, not for shared libraries)
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
-  target_link_options(crypto_tool PRIVATE -pie)
-endif()
+# Add -pie for the Release executable only.
+target_link_options(crypto_tool PRIVATE "$<$<CONFIG:Release>:-pie>")
 
 target_include_directories(
   crypto_tool
-  PRIVATE ${CMAKE_DEPENDENCY_INCLUDEDIR}
-          "$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src>"
+  PRIVATE "$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src>"
           "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
+target_include_directories(crypto_tool SYSTEM PRIVATE
+  ${CMAKE_DEPENDENCY_INCLUDEDIR})
 
-# 创建config目录
-file(MAKE_DIRECTORY ${CMAKE_INSTALL_PREFIX}/config)
-
-# 复制crypto_tool_config文件
-file(COPY ${CMAKE_SOURCE_DIR}/config/crypto_tool_config.json
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/config)
+install(TARGETS crypto_tool
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
+install(FILES "${CMAKE_SOURCE_DIR}/config/crypto_tool_config.json"
+  DESTINATION config
+  PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ)

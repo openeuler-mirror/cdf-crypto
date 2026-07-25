@@ -11,8 +11,12 @@ if(ENABLE_DOWNLOAD_DEPENDENCY)
       GIT_SHALLOW
       On)
 else()
-  set(DOWNLOAD_ARGS SOURCE_DIR ${CMAKE_DEPENDENCY_SRCDIR}/openssl
-                    DOWNLOAD_COMMAND "")
+  set(DOWNLOAD_ARGS
+      DOWNLOAD_COMMAND
+        ${CMAKE_COMMAND}
+        -DSOURCE_DIR=${CMAKE_DEPENDENCY_SRCDIR}/openssl
+        -DDESTINATION_DIR=<SOURCE_DIR>
+        -P ${PROJECT_SOURCE_DIR}/cmake/CopyGitWorktree.cmake)
 endif()
 
 ExternalProject_Add(
@@ -21,13 +25,15 @@ ExternalProject_Add(
   GIT_SUBMODULES "" # HACK
   PREFIX ${DEPENDENCY_INSTALL_PREFIX_NAME}
   CONFIGURE_COMMAND
-    ./Configure no-legacy no-weak-ssl-ciphers no-tests no-ui-console no-shared
+    <SOURCE_DIR>/Configure no-legacy no-weak-ssl-ciphers no-tests
+    no-ui-console no-shared
     no-makedepend
     --release --libdir=${CMAKE_INSTALL_LIBDIR}
     --prefix=${CMAKE_DEPENDENCY_INSTALL_PREFIX} -w
-  BUILD_COMMAND make
-  INSTALL_COMMAND make install
-  BUILD_IN_SOURCE On
+  BUILD_COMMAND "${CDF_NATIVE_MAKE_EXECUTABLE}"
+  INSTALL_COMMAND "${CDF_NATIVE_MAKE_EXECUTABLE}" install
+  BUILD_BYPRODUCTS
+    "${CMAKE_DEPENDENCY_LIBDIR}/libcrypto${CMAKE_STATIC_LIBRARY_SUFFIX}"
   EXCLUDE_FROM_ALL On
   LOG_DOWNLOAD On
   LOG_CONFIGURE On

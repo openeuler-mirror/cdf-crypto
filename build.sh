@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 #
 # Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
@@ -13,346 +13,543 @@
 # See the Mulan PSL v2 for more details.
 #
 
-###
-### build.sh --- build project
-###
-### Usage:
-###     build.sh <target> [-D] [-C] [-t <target>]
-###
-### Options:
-###     <target>        Build target used by Make
-###     -h | --help     Show help message
-###     -D | --debug    Build debug version
-###     -C | --coverage Generate coverage report files
-###     -t | --target   Specifying build target, default is `all`
-###                     Supported targets:
-###                         `all`              build all target in source code
-###                         `test`             build all tests in test/ directory
-###                         `output`           build output
-###                         `cicd_default`     build mode for cicd output only
-###                         `cicd_coverage`    build mode for cicd coverage only
-###          --enable   Enable specific modules (space-separated). Supported modules: `authentication` `authorization` `cert` `cryption` `cli_tool` `key_management` `rand` `psk_management`
+set -Eeuo pipefail
 
-# 函数内命令（后台命令）失败时，立即退出函数
-set -o errtrace
-# 脚本内命令（前台命令）失败时，立即退出脚本
-set -o errexit
+PROJECT_ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)
 
-build_target='all'
-build_type='Release'
-enable_coverage='Off'
-enable_test='On'
-enable_download_dependency='On' # 是否自动下载依赖，否则请手动下载依赖至 project_root/external 文件夹
-enable_fuzz='Off'
-enable_modules=()  # 初始化编译模块数组
-readonly ALLOWED_MODULES=("authentication" "authorization" "cert" "cryption" "cli_tool" "key_management" "rand" "psk_management")
+COMMAND=build
+PACKAGE_TYPE=
+CLEAN_SCOPE=build
+PROFILE=release
+PROFILE_SET=OFF
+MODULES=ALL
+FETCH_DEPS=OFF
+WITH_TESTS=OFF
+WITH_TESTS_SET=OFF
+JOBS=
+INSTALL_PREFIX=
+PREFIX_SET=OFF
+ENABLE_SHARED=ON
 
-CPU_NUM=$(grep -w processor /proc/cpuinfo|wc -l)
+BUILD_TEST=OFF
+BUILD_COVERAGE=OFF
+BUILD_ASAN=OFF
+BUILD_FUZZ=OFF
+CMAKE_BUILD_TYPE=Release
+BUILD_DIR=
 
-# 版本号
-package_version="$(($(date "+%Y") % 100)).$((($(date "+%m") - 1) / 3)).0"
-package_release=1
+readonly SUPPORTED_MODULES=(
+    authentication
+    authorization
+    cryption
+    cli_tool
+    key_management
+    rand
+    psk_management
+)
 
-# 获取项目根目录（目前为构建脚本所在目录）
-PROJECT_ROOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+usage() {
+    cat <<'EOF'
+Usage:
+  bash build.sh [command] [options]
 
-OUTPUT_DIR=${PROJECT_ROOT_DIR}/output
+Commands:
+  build                 Build product targets (default command)
+  test                  Build and run CTest tests
+  coverage              Build, test, and generate a coverage report
+  install               Build and install to a staging prefix
+  package rpm           Build and create an RPM package
+  fuzz                   Build fuzz-instrumented targets
+  clean [scope]         Remove generated directories
+  help                  Show this help
 
-# 脚本出错时捕获错误，并执行 trap_error 处理错误
-trap 'trap_error $LINENO ${FUNCNAME} $BASH_LINENO' ERR
-# 脚本退出时，恢复到脚本的执行目录
-trap 'cd $PROJECT_ROOT_DIR' EXIT
+Clean scopes:
+  build                 Remove build/ (default scope)
+  output                Remove output/
+  package               Remove package/
+  all                   Remove build/, output/, and package/
 
-FAILURE='[\033[1;31mFAILED\033[0;39m]'
+Options:
+  --profile <name>      debug, release, or asan (default: release)
+  --modules <a,b,...>   Build selected modules and required dependencies
+  --fetch-deps          Allow automatic dependency downloads
+  --with-tests          Build test binaries without running them (build only)
+  --jobs <n>            Parallel build jobs (default: detected CPU count)
+  --prefix <path>       Install staging prefix (install only; default: output/cdf)
+  --no-shared           Do not build the shared CDF library
+  -h, --help            Show this help
 
-# 日志打印辅助函数
-function log_info() {
-    if [ $# -lt 1 ]; then
-        return
-    fi
-    echo "$(date +"%F %T") [INFO] $*" >>"$LOG_FILE"
-    echo "$(date +"%F %T") [INFO] $*"
+Examples:
+  bash build.sh
+  bash build.sh build --profile debug --modules rand,authorization
+  bash build.sh test --modules rand
+  bash build.sh coverage
+  bash build.sh install --fetch-deps
+  bash build.sh package rpm --fetch-deps
+  bash build.sh clean all
+EOF
 }
 
-# 脚本错误处理
-function trap_error() {
-    local err=$?
-    local line=$1 # LINENO
-    [ "$2" != "" ] && local func_stack=$2 # func name
-    [ "$3" != "" ] && local line_call_func=$3 # line where func was called
-    echo "<---"
-    echo "ERROR: line $line - command exited with status: $err"
-    if [ "$func_stack" != "" ]; then
-        echo -n "   ... Error at function ${func_stack[0]}() "
-        if [ "$line_call_func" != "" ]; then
-            echo -n "called at line $3"
+die() {
+    echo "Error: $*" >&2
+    exit 1
+}
+
+is_supported_module() {
+    local requested=$1
+    local module
+    for module in "${SUPPORTED_MODULES[@]}"; do
+        if [[ "${requested}" == "${module}" ]]; then
+            return 0
         fi
-        echo
-    fi
-    echo "--->"
+    done
+    return 1
 }
 
-function echo_failure() {
-    echo -e "CDF project : $FAILURE"
+parse_modules() {
+    local value=$1
+    [[ -n "${value}" ]] || die "--modules requires at least one module"
+
+    local raw_modules=()
+    IFS=',' read -r -a raw_modules <<<"${value}"
+    local selected=()
+    local module existing
+    for module in "${raw_modules[@]}"; do
+        [[ -n "${module}" ]] || die "--modules contains an empty module name"
+        is_supported_module "${module}" ||
+            die "Unknown module '${module}'. Supported modules: ${SUPPORTED_MODULES[*]}"
+        for existing in "${selected[@]}"; do
+            [[ "${existing}" != "${module}" ]] || die "Duplicate module '${module}'"
+        done
+        selected+=("${module}")
+    done
+    MODULES=$(IFS=';'; echo "${selected[*]}")
 }
 
-function build_default() {
-    # 生成分号分隔的模块列表
-    local module_list
-    if [ ${#enable_modules[@]} -gt 0 ]; then
-        module_list=$(IFS=';'; echo "${enable_modules[*]}")
-    fi
-    cmake ..\
-        -DCMAKE_BUILD_TYPE=${build_type}\
-        -DBUILD_CDF_ONLY=Off\
-        -DBUILD_TEST=${enable_test}\
-        -DBUILD_COVERAGE=${enable_coverage}\
-        -DENABLE_DOWNLOAD_DEPENDENCY=${enable_download_dependency}\
-        -DBUILD_FUZZ=${enable_fuzz}\
-        ${module_list:+-DENABLE_MODULES="$module_list"}
-
-    make -j${CPU_NUM}
+require_value() {
+    local option=$1
+    local remaining=$2
+    local value=${3-}
+    [[ ${remaining} -ge 2 && -n "${value}" && "${value}" != -* ]] ||
+        die "${option} requires a value"
 }
 
-function build_output() {
-    # 生成分号分隔的模块列表
-    local module_list
-    if [ ${#enable_modules[@]} -gt 0 ]; then
-        module_list=$(IFS=';'; echo "${enable_modules[*]}")
-    fi
-    cmake ..\
-        -DCMAKE_BUILD_TYPE=${build_type}\
-        -DBUILD_TEST=${enable_test}\
-        -DBUILD_COVERAGE=${enable_coverage}\
-        -DENABLE_DOWNLOAD_DEPENDENCY=${enable_download_dependency}\
-        -DBUILD_CDF_ONLY=On\
-        -DCMAKE_INSTALL_PREFIX=${OUTPUT_DIR}/cdf\
-        ${module_list:+-DENABLE_MODULES="$module_list"}
-
-    make -j${CPU_NUM}
-    make install
-
-    process_output
-}
-
-function build_rpm() {
-    cmake .. \
-        -DCMAKE_BUILD_TYPE=${build_type} \
-        -DBUILD_TEST=${enable_test} \
-        -DENABLE_COVERAGE=${enable_coverage} \
-        -DENABLE_DOWNLOAD_DEPENDENCY=${enable_download_dependency}\
-        -DBUILD_CDF_ONLY=On\
-        -DCMAKE_INSTALL_PREFIX=${OUTPUT_DIR}/cdf\
-        -DRPM_PACKAGE_VERSION="${package_version}" \
-        -DRPM_PACKAGE_RELEASE="${package_release}"
-
-    make build_"${build_target}" -j${CPU_NUM}
-    process_output
-}
-
-function process_output() {
-    # 修改目录文件权限
-    find ${OUTPUT_DIR} -type d -exec chmod 750 {} \;
-    find ${OUTPUT_DIR} -name "*.h" -type f -exec chmod 440 {} \;
-    find ${OUTPUT_DIR} -name "*.so" -type f -exec chmod 550 {} \;
-    # 仅在编译所有模块或编译cli_tool时才配置config权限
-    if [[ ${#enable_modules[@]} -eq 0 || " ${enable_modules[*]} " =~ " cli_tool " ]]; then
-        chmod 550 ${OUTPUT_DIR}/cdf/bin/crypto_tool
-        chmod -R 750 ${OUTPUT_DIR}/cdf/config
-        chmod 640 ${OUTPUT_DIR}/cdf/config/crypto_tool_config.json
-    fi
-}
-
-function run_test() {
-    if [[ "${enable_test}" == 'On' ]]; then
-      make build_test -j${CPU_NUM}
-    fi
-    if [[ "${enable_coverage}" == 'On' ]]; then
-        make coverage
-    fi
-}
-
-# 执行 CMake 构建
-function build_cmake() {
-
-    if [[ "${enable_clean}" == 'On' ]]; then
-        clean ${build_target}
+parse_args() {
+    if [[ $# -gt 0 && "$1" != -* ]]; then
+        COMMAND=$1
+        shift
     fi
 
-    log_info "***** start build_cmake *****"
-
-    pushd build
-    log_info "building target ${build_target}."
-    if [[ "${build_target}" == 'all' ]]; then
-        build_default
-    fi
-
-    if [[ "${build_target}" == 'test' ]]; then
-        enable_test='On' # enable test
-        enable_download_dependency='Off'
-        build_default
-        run_test
-    fi
-
-    if [[ "${build_target}" == 'output' ]]; then
-        build_type='Release' # always release
-        enable_test='Off' # alwasy disable test
-        enable_coverage='Off' # alwasy disable coverage
-        build_output
-    fi
-
-    if [[ "${build_target}" == 'cicd_default' ]]; then
-        build_type='Release'
-        enable_test='Off'
-        enable_coverage='Off'
-        enable_download_dependency='Off'
-        build_output
-    fi
-
-    if [[ "${build_target}" == 'rpm' ]]; then
-        build_type='Release'
-        enable_test='Off'
-        enable_coverage='Off'
-        build_rpm
-    fi
-
-    if [[ "${build_target}" == 'cicd_coverage' ]]; then
-        build_type='Release'
-        enable_test='On'
-        enable_coverage='On'
-        enable_download_dependency='Off'
-        build_default
-        run_test
-    fi
-
-    if [[ "${build_target}" == 'fuzz' ]]; then
-        build_type='Debug'
-        enable_test='On'
-        enable_coverage='Off'
-        enable_download_dependency='Off'
-        enable_fuzz='On'
-        build_default
-    fi
-
-    local ret=$?
-    popd
-
-    if [ $ret -ne 0 ]; then
-        log_info "build_cmake failed"
-        echo_failure
-        exit 1
-    fi
-}
-
-# 解析 help 信息并打印，help 信息放在文件头
-# 注意：脚本内其他地方不要以 ### 开头进行注释
-function help() {
-    sed -rn 's/^### ?//;T;p;' "$0"
-}
-
-# 脚本参数解析
-function parse_args() {
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-        -h | --help)
-            help
-            exit
+    case "${COMMAND}" in
+        build | test | coverage | install | fuzz | help)
             ;;
-        -D | --debug)
-            build_type='Debug'
+        package)
+            [[ $# -gt 0 ]] || die "package requires a package type; supported: rpm"
+            PACKAGE_TYPE=$1
             shift
+            [[ "${PACKAGE_TYPE}" == "rpm" ]] ||
+                die "Unknown package type '${PACKAGE_TYPE}'; supported: rpm"
             ;;
-        -t | --target)
-            if [[ $# -gt 1 && "$2" != "-"* ]]; then
-                build_target="$2"
-                shift 2
-            else
-                log_info "Error: Argument required after -t|--target."
-                exit 1
-            fi
-            ;;
-        -C | --coverage)
-            enable_coverage='On'
-            shift
-            ;;
-        -c | --clean)
-            clean   # 清理构建目录
-            shift
-            ;;
-        --enable)
-            shift  # 跳过 --enable
-            # 处理模块参数
-            while [[ $# -gt 0 && ! "$1" =~ ^- ]]; do
-                module="$1"
-                # 校验模块名称
-                if ! [[ " ${ALLOWED_MODULES[*]} " =~ " ${module} " ]]; then
-                    echo "Error: Invalid module '$module'. Allowed: ${ALLOWED_MODULES[*]}"
-                    exit 1
-                fi
-                # 防止重复
-                if [[ " ${enable_modules[*]} " =~ " ${module} " ]]; then
-                    echo "Error: Module '$module' already specified"
-                    exit 1
-                fi
-                enable_modules+=("$module")
+        clean)
+            if [[ $# -gt 0 && "$1" != -* ]]; then
+                CLEAN_SCOPE=$1
                 shift
-            done
-            # 检查至少添加了一个模块
-            if [ ${#enable_modules[@]} -eq 0 ]; then
-                echo "Error: No modules specified after --enable"
-                exit 1
             fi
             ;;
         *)
-            [ "$1" != "" ] &&build_target="$1"
-            shift
+            die "Unknown command '${COMMAND}'. Run 'bash build.sh help' for usage."
             ;;
+    esac
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -h | --help)
+                COMMAND=help
+                shift
+                ;;
+            --profile)
+                require_value "$1" "$#" "${2-}"
+                PROFILE=$2
+                PROFILE_SET=ON
+                shift 2
+                ;;
+            --modules)
+                require_value "$1" "$#" "${2-}"
+                parse_modules "$2"
+                shift 2
+                ;;
+            --fetch-deps)
+                FETCH_DEPS=ON
+                shift
+                ;;
+            --with-tests)
+                WITH_TESTS=ON
+                WITH_TESTS_SET=ON
+                shift
+                ;;
+            --jobs)
+                require_value "$1" "$#" "${2-}"
+                JOBS=$2
+                shift 2
+                ;;
+            --prefix)
+                require_value "$1" "$#" "${2-}"
+                INSTALL_PREFIX=$2
+                PREFIX_SET=ON
+                shift 2
+                ;;
+            --no-shared)
+                ENABLE_SHARED=OFF
+                shift
+                ;;
+            *)
+                die "Unknown option '$1'. Run 'bash build.sh help' for usage."
+                ;;
         esac
     done
 }
 
-function clean() {
-    local target_dirs=()
-    case "$1" in
-        "3rdparty")
-            target_dirs+=("${PROJECT_ROOT_DIR}/deps")
-            ;;
-        "package")
-            target_dirs+=("${PROJECT_ROOT_DIR}/build")
-            target_dirs+=("${PROJECT_ROOT_DIR}/output")
+validate_options() {
+    if [[ -n "${JOBS}" && ! "${JOBS}" =~ ^[1-9][0-9]*$ ]]; then
+        die "--jobs must be a positive integer"
+    fi
+
+    case "${PROFILE}" in
+        debug | release | asan)
             ;;
         *)
-            target_dirs+=("${PROJECT_ROOT_DIR}/build")
+            die "Unknown profile '${PROFILE}'; supported: debug, release, asan"
             ;;
     esac
 
-    for target_dir in "${target_dirs[@]}"; do
-        if [ ! -d "$target_dir" ]; then
-            echo "Warning: Directory '$target_dir' does not exist."
-        else
-            rm -rf "$target_dir"
-            echo "Directory '$target_dir' has been cleaned."
-        fi
-    done
+    if [[ "${COMMAND}" == "coverage" || "${COMMAND}" == "fuzz" ||
+          "${COMMAND}" == "package" ]]; then
+        [[ "${PROFILE_SET}" == "OFF" ]] || die "${COMMAND} does not accept --profile"
+    fi
+    if [[ "${COMMAND}" != "build" ]]; then
+        [[ "${WITH_TESTS_SET}" == "OFF" ]] || die "${COMMAND} does not accept --with-tests"
+    fi
+    if [[ "${COMMAND}" != "install" ]]; then
+        [[ "${PREFIX_SET}" == "OFF" ]] || die "${COMMAND} does not accept --prefix"
+    fi
 
-    if [[ ! -d "${PROJECT_ROOT_DIR}/build" ]]; then
-        mkdir -p "${PROJECT_ROOT_DIR}/build"
-        echo "Directory 'build' has been recreated."
+    if [[ "${COMMAND}" == "clean" || "${COMMAND}" == "help" ]]; then
+        [[ "${PROFILE_SET}" == "OFF" ]] || die "${COMMAND} does not accept --profile"
+        [[ "${MODULES}" == "ALL" ]] || die "${COMMAND} does not accept --modules"
+        [[ "${FETCH_DEPS}" == "OFF" ]] || die "${COMMAND} does not accept --fetch-deps"
+        [[ -z "${JOBS}" ]] || die "${COMMAND} does not accept --jobs"
+        [[ "${ENABLE_SHARED}" == "ON" ]] || die "${COMMAND} does not accept --no-shared"
+    fi
+
+    if [[ "${COMMAND}" == "clean" ]]; then
+        case "${CLEAN_SCOPE}" in
+            build | output | package | all)
+                ;;
+            *)
+                die "Unknown clean scope '${CLEAN_SCOPE}'; supported: build, output, package, all"
+                ;;
+        esac
+    fi
+
+    if [[ "${COMMAND}" == "package" && "${MODULES}" != "ALL" ]]; then
+        echo "Warning: partial-module RPMs currently share the cdf-crypto package identity; do not install them alongside a full-module RPM." >&2
     fi
 }
 
-echo $(date +"[%Y-%m-%d %H:%M]"): "$0" "$@"
-START_TIME=$(date +%s.%N)
+require_ctest_junit_support() {
+    if ! command -v ctest >/dev/null 2>&1; then
+        die "CTest is required for command '${COMMAND}'"
+    fi
 
-PROJECT_BUILD_DIR=$PROJECT_ROOT_DIR/build
-LOG_FILE=$PROJECT_BUILD_DIR/build.log
-cd "${PROJECT_ROOT_DIR}"
+    local version_output
+    version_output=$(ctest --version 2>/dev/null) ||
+        die "Unable to determine the CTest version for command '${COMMAND}'"
 
-[ ! -d "${PROJECT_ROOT_DIR}/build" ] && mkdir -p ${PROJECT_ROOT_DIR}/build
+    local version
+    version=$(sed -n '1{s/^ctest version //p;q;}' <<<"${version_output}")
+    if [[ ! "${version}" =~ ^([0-9]+)\.([0-9]+)(\.[0-9]+)?([-.+].*)?$ ]]; then
+        die "Unable to parse CTest version '${version}' for command '${COMMAND}'"
+    fi
 
-parse_args "$@" # 解析脚本参数
-build_cmake # 执行 CMake 构建
+    local major=${BASH_REMATCH[1]}
+    local minor=${BASH_REMATCH[2]}
+    if ((major < 3 || (major == 3 && minor < 21))); then
+        die "CTest 3.21 or newer is required to generate JUnit XML; found ${version}"
+    fi
+}
 
-END_TIME=$(date +%s.%N)
-EXEC_TIME=$(echo "scale=3; ($END_TIME - $START_TIME) / 1" | bc)
-echo -e $(date +"[%Y-%m-%d %H:%M]"): "\033[32m" Build complated in "$EXEC_TIME"s '\033[0m'
+detect_jobs() {
+    if [[ -n "${JOBS}" ]]; then
+        return
+    fi
+    JOBS=$(getconf _NPROCESSORS_ONLN 2>/dev/null || true)
+    if [[ ! "${JOBS}" =~ ^[1-9][0-9]*$ ]]; then
+        JOBS=1
+    fi
+}
+
+select_profile() {
+    case "${COMMAND}" in
+        coverage)
+            PROFILE=coverage
+            CMAKE_BUILD_TYPE=Debug
+            BUILD_TEST=ON
+            BUILD_COVERAGE=ON
+            ;;
+        fuzz)
+            PROFILE=fuzz
+            CMAKE_BUILD_TYPE=Debug
+            BUILD_TEST=ON
+            BUILD_ASAN=ON
+            BUILD_FUZZ=ON
+            ;;
+        package)
+            PROFILE=release
+            CMAKE_BUILD_TYPE=Release
+            ;;
+        *)
+            case "${PROFILE}" in
+                debug)
+                    CMAKE_BUILD_TYPE=Debug
+                    ;;
+                release)
+                    CMAKE_BUILD_TYPE=Release
+                    ;;
+                asan)
+                    CMAKE_BUILD_TYPE=Debug
+                    BUILD_ASAN=ON
+                    ;;
+            esac
+            ;;
+    esac
+
+    if [[ "${COMMAND}" == "test" || "${WITH_TESTS}" == "ON" ]]; then
+        BUILD_TEST=ON
+    fi
+
+    BUILD_DIR="${PROJECT_ROOT_DIR}/build/${PROFILE}"
+    if [[ -z "${INSTALL_PREFIX}" ]]; then
+        INSTALL_PREFIX="${PROJECT_ROOT_DIR}/output/cdf"
+    elif [[ "${INSTALL_PREFIX}" != /* ]]; then
+        INSTALL_PREFIX="${PROJECT_ROOT_DIR}/${INSTALL_PREFIX}"
+    fi
+}
+
+print_configuration() {
+    cat <<EOF
+Command            : ${COMMAND}${PACKAGE_TYPE:+ ${PACKAGE_TYPE}}
+Profile            : ${PROFILE}
+Build directory    : ${BUILD_DIR}
+Install prefix     : ${INSTALL_PREFIX}
+Modules            : ${MODULES}
+Download dependency: ${FETCH_DEPS}
+Build tests        : ${BUILD_TEST}
+Build shared       : ${ENABLE_SHARED}
+Parallel jobs      : ${JOBS}
+EOF
+}
+
+prepare_install_prefix() {
+    if [[ "${PREFIX_SET}" == "OFF" &&
+          ("${COMMAND}" == "install" || "${COMMAND}" == "package") ]]; then
+        local default_prefix="${PROJECT_ROOT_DIR}/output/cdf"
+        [[ "${INSTALL_PREFIX}" == "${default_prefix}" ]] ||
+            die "Refusing to clean an unexpected install prefix '${INSTALL_PREFIX}'"
+        rm -rf -- "${default_prefix}"
+    fi
+}
+
+prepare_build_directory() {
+    if [[ "${COMMAND}" != "coverage" ]]; then
+        return
+    fi
+
+    local coverage_dir="${PROJECT_ROOT_DIR}/build/coverage"
+    [[ "${BUILD_DIR}" == "${coverage_dir}" ]] ||
+        die "Refusing to clean an unexpected coverage directory '${BUILD_DIR}'"
+    rm -rf -- "${coverage_dir}"
+}
+
+configure_project() {
+    cmake -S "${PROJECT_ROOT_DIR}" -B "${BUILD_DIR}" \
+        -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}" \
+        -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" \
+        -DBUILD_TEST="${BUILD_TEST}" \
+        -DBUILD_COVERAGE="${BUILD_COVERAGE}" \
+        -DBUILD_ASAN="${BUILD_ASAN}" \
+        -DBUILD_FUZZ="${BUILD_FUZZ}" \
+        -DENABLE_SHARED="${ENABLE_SHARED}" \
+        -DENABLE_DOWNLOAD_DEPENDENCY="${FETCH_DEPS}" \
+        -DENABLE_ALL_MODULES=OFF \
+        -DENABLE_MODULE_AUTHENTICATION=OFF \
+        -DENABLE_MODULE_AUTHORIZATION=OFF \
+        -DENABLE_MODULE_CRYPTION=OFF \
+        -DENABLE_MODULE_CLI_TOOL=OFF \
+        -DENABLE_MODULE_KEY_MANAGEMENT=OFF \
+        -DENABLE_MODULE_RAND=OFF \
+        -DENABLE_MODULE_PSK_MANAGEMENT=OFF \
+        -DENABLE_MODULES="${MODULES}"
+}
+
+validate_output_subdirectory() {
+    local name=$1
+    local value=$2
+    [[ -n "${value}" && "${value}" != /* && "${value}" != "." &&
+       "${value}" != ".." && "${value}" != ../* &&
+       "${value}" != */../* && "${value}" != */.. ]] ||
+        die "CMake reported an unsafe ${name} value '${value}'"
+}
+
+prepare_product_output_directories() {
+    local cache_file="${BUILD_DIR}/CMakeCache.txt"
+    [[ -f "${cache_file}" ]] ||
+        die "CMake configuration did not create '${cache_file}'"
+
+    local bindir libdir
+    bindir=$(sed -n 's/^CMAKE_INSTALL_BINDIR:PATH=//p' "${cache_file}")
+    libdir=$(sed -n 's/^CMAKE_INSTALL_LIBDIR:PATH=//p' "${cache_file}")
+    validate_output_subdirectory CMAKE_INSTALL_BINDIR "${bindir}"
+    validate_output_subdirectory CMAKE_INSTALL_LIBDIR "${libdir}"
+
+    # CMake does not remove files produced by targets disabled on a later
+    # reconfigure. Remove only final product directories; object files and
+    # per-profile dependency builds remain available for incremental builds.
+    rm -rf -- "${BUILD_DIR}/${bindir}" "${BUILD_DIR}/${libdir}"
+    mkdir -p "${BUILD_DIR}/${bindir}" "${BUILD_DIR}/${libdir}"
+}
+
+build_project() {
+    cmake --build "${BUILD_DIR}" --config "${CMAKE_BUILD_TYPE}" \
+        --parallel "${JOBS}"
+}
+
+run_ctest() {
+    local report_directory="${BUILD_DIR}/Testing"
+    local report_path="${report_directory}/test_results.xml"
+    local report_relative_path="Testing/test_results.xml"
+
+    mkdir -p "${report_directory}"
+    rm -f -- "${report_path}"
+
+    local ctest_status=0
+    (cd "${BUILD_DIR}" &&
+        ctest -C "${CMAKE_BUILD_TYPE}" --output-on-failure \
+            --output-junit "${report_relative_path}") || ctest_status=$?
+
+    [[ -s "${report_path}" ]] ||
+        die "CTest did not produce a non-empty JUnit report at '${report_path}'"
+    return "${ctest_status}"
+}
+
+install_project() {
+    cmake --build "${BUILD_DIR}" --target install \
+        --config "${CMAKE_BUILD_TYPE}" --parallel "${JOBS}"
+}
+
+package_rpm() {
+    local package_dir="${PROJECT_ROOT_DIR}/package/rpm"
+    local cpack_output_dir="${BUILD_DIR}/package-output"
+
+    [[ "${package_dir}" == "${PROJECT_ROOT_DIR}/package/rpm" ]] ||
+        die "Refusing to replace an unexpected package directory '${package_dir}'"
+    [[ "${cpack_output_dir}" == "${BUILD_DIR}/package-output" ]] ||
+        die "Refusing to replace an unexpected CPack output directory '${cpack_output_dir}'"
+
+    rm -rf -- "${package_dir}" "${cpack_output_dir}"
+    mkdir -p "${package_dir}"
+    cpack --config "${BUILD_DIR}/CPackConfig.cmake" \
+        -C "${CMAKE_BUILD_TYPE}" -G RPM -B "${cpack_output_dir}"
+
+    local rpm_files=()
+    local rpm_file
+    while IFS= read -r -d '' rpm_file; do
+        rpm_files+=("${rpm_file}")
+    done < <(find "${cpack_output_dir}" -type f -name '*.rpm' -print0)
+
+    [[ ${#rpm_files[@]} -gt 0 ]] ||
+        die "CPack completed without producing an RPM below '${cpack_output_dir}'"
+
+    for rpm_file in "${rpm_files[@]}"; do
+        mv -f "${rpm_file}" "${package_dir}/"
+    done
+}
+
+clean_generated() {
+    local scope=$1
+    local paths=()
+    case "${scope}" in
+        build)
+            paths=("${PROJECT_ROOT_DIR}/build")
+            ;;
+        output)
+            paths=("${PROJECT_ROOT_DIR}/output")
+            ;;
+        package)
+            paths=("${PROJECT_ROOT_DIR}/package")
+            ;;
+        all)
+            paths=(
+                "${PROJECT_ROOT_DIR}/build"
+                "${PROJECT_ROOT_DIR}/output"
+                "${PROJECT_ROOT_DIR}/package"
+            )
+            ;;
+    esac
+
+    local path
+    for path in "${paths[@]}"; do
+        if [[ -e "${path}" ]]; then
+            rm -rf -- "${path}"
+            echo "Removed ${path}"
+        else
+            echo "Already clean: ${path}"
+        fi
+    done
+}
+
+main() {
+    parse_args "$@"
+    validate_options
+
+    if [[ "${COMMAND}" == "help" ]]; then
+        usage
+        return
+    fi
+    if [[ "${COMMAND}" == "clean" ]]; then
+        clean_generated "${CLEAN_SCOPE}"
+        return
+    fi
+
+    if [[ "${COMMAND}" == "test" || "${COMMAND}" == "coverage" ]]; then
+        require_ctest_junit_support
+    fi
+
+    detect_jobs
+    select_profile
+    print_configuration
+    prepare_install_prefix
+    prepare_build_directory
+    configure_project
+    prepare_product_output_directories
+    build_project
+
+    case "${COMMAND}" in
+        test)
+            run_ctest
+            ;;
+        coverage)
+            run_ctest
+            cmake --build "${BUILD_DIR}" --target coverage \
+                --config "${CMAKE_BUILD_TYPE}" --parallel "${JOBS}"
+            ;;
+        install)
+            install_project
+            ;;
+        package)
+            install_project
+            package_rpm
+            ;;
+    esac
+}
+
+main "$@"

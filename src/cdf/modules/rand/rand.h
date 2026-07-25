@@ -16,7 +16,7 @@
 #include <cstdint>
 #include <string>
 
-#include "cdf/modules/cryption/native_cryptor_def.h"
+#include "cdf/base/crypt_error.h"
 
 namespace cdf {
 

@@ -36,7 +36,7 @@
 #include "cdf/connector/krb5_wrapper.h"
 #include "cdf/modules/authentication/kerberos/krb_ctx.h"
 #include "cdf/modules/cryption/define.h"
-#include "cdf/modules/cryption/km_cryptor.h"
+#include "cdf/modules/key_management/km_cryptor.h"
 #include "cdf/modules/key_management/define.h"
 #include "cdf/modules/key_management/key_manager_factory.h"
 #include "cdf/utils/file_utils.h"
@@ -331,7 +331,7 @@ public:
             return false;
         }
 
-        if (statBuf.st_size <= 0 || statBuf.st_size > MAX_FILE_SIZE) {
+        if (!S_ISREG(statBuf.st_mode) || statBuf.st_size <= 0 || statBuf.st_size > MAX_FILE_SIZE) {
             CCSEC_LOG_ERROR("|GetKeyTabVal|END|returnF|file size is invalid: " << statBuf.st_size);
             return false;
         }
