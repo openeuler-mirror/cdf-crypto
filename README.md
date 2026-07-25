@@ -16,9 +16,12 @@ CDF的全称是Confidential Data defensive Framework，提供敏感数据保护�
 1. 编译环境要求
 
 + 发布目标环境要求：OpenEuler 内核版本不低于 kernel 6.6。
-+ Rand/Cryption 使用 OpenSSL 3.0.9 源码构建。离线构建需要
-  `external/openssl` 为 OpenSSL 3.0.9 Git 工作树；也可以通过
-  `--fetch-deps` 下载 OpenSSL 3.0.9。
++ Rand/Cryption 使用 OpenSSL 3 Provider/EVP API，支持 OpenSSL 3.0.9
+  及以上版本。项目声明和 `--fetch-deps` 基线为 OpenSSL 3.0.9；
+  离线构建需要 `external/openssl` 为 OpenSSL 3.0.9 或更高版本 Git
+  工作树，也可以通过 `--fetch-deps` 下载 OpenSSL 3.0.9。
++ 当前已验证 OpenSSL 3.0.9、3.1.8、3.3.7、3.5.7 和 4.0.1 下
+  Rand/Cryption 构建与测试通过。
 + 测试环境可按实际发行版安装同名或等价软件包；以下以 yum 系包名为例。
 
 基础编译工具，适用于 `build`、`test`、`coverage`、`install` 和 `package rpm`：

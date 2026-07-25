@@ -7,8 +7,10 @@
 - 支持 C++17 的 GCC 或 Clang；
 - Git、GNU Make 和 Perl，用于隔离构建 OpenSSL 源码；下载构建 Kerberos 还需要
   Autoconf；
-- 离线构建 Rand/Cryption 需要 `external/openssl` 中的 OpenSSL 3.0.9 Git
-  工作树；也可以使用 `--fetch-deps` 允许下载；
+- Rand/Cryption 使用 OpenSSL 3 Provider/EVP API，支持 OpenSSL 3.0.9
+  及以上版本。项目声明和 `--fetch-deps` 基线为 OpenSSL 3.0.9；
+  离线构建需要 `external/openssl` 中的 OpenSSL 3.0.9 或更高版本 Git
+  工作树，也可以使用 `--fetch-deps` 允许下载 OpenSSL 3.0.9；
 - libboundscheck、RapidJSON 和 Kerberos 使用系统开发包，或者通过
   `--fetch-deps` 下载；
 - 测试需要 `external/gtest` 源码，或者使用 `--fetch-deps` 下载 GTest；
@@ -227,6 +229,22 @@ bash build.sh build
 OpenSSL 源码需要保留为 Git 工作树。构建会从其 `HEAD` 导出干净快照到
 `build/<profile>/deps/src/` 后进行 out-of-source 编译，不会在
 `external/openssl` 中生成或复用构建残留，因此不同 Profile 可以并行构建。
+
+### OpenSSL 版本范围
+
+项目声明和 `--fetch-deps` 基线为 OpenSSL 3.0.9，当前 Rand/Cryption 在
+OpenSSL 3.0.9 下构建与测试通过；更高版本基于 OpenSSL 3 Provider/EVP API
+兼容性均支持。
+
+已完成以下代表版本验证：
+
+| OpenSSL 版本 | 验证结果 |
+| --- | --- |
+| 3.0.9 | `--fetch-deps` 基线，Rand/Cryption 47/47 通过 |
+| 3.1.8 | Rand/Cryption 47/47 通过 |
+| 3.3.7 | Rand/Cryption 47/47 通过 |
+| 3.5.7 | Rand/Cryption 47/47 通过 |
+| 4.0.1 | Rand/Cryption 47/47 通过 |
 
 显式允许下载：
 
