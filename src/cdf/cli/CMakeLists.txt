@@ -1,7 +1,3 @@
-#
-# Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
-#
-
 add_executable(
   crypto_tool
   ${CMAKE_CURRENT_LIST_DIR}/cmd.cpp

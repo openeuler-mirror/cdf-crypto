@@ -1,5 +1,3 @@
-# Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
-
 cmake_minimum_required(VERSION 3.14.1)
 
 project(cdf VERSION 1.0.0 LANGUAGES C CXX)

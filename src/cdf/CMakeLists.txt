@@ -1,7 +1,3 @@
-#
-# Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
-#
-
 add_library(cdf_obj OBJECT)
 cdf_apply_project_options(cdf_obj)
 
