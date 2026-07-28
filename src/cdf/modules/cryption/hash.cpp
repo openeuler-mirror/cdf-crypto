@@ -11,6 +11,7 @@
  * See the Mulan PSL v2 for more details.
  */
 
+#include <array>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -18,37 +19,68 @@
 #include <iostream>
 #include <iterator> // 用于 std::begin 和 std::end
 
-#include "securec.h"
 #include "cdf/base/ccsec_logger.h"
 #include "hash.h"
 
 #include "ossl_wrappers.h"
 
+#ifdef CDF_ENABLE_BLAKE3
+#include "blake3.h"
+#endif
+
 namespace cdf {
+namespace {
+constexpr size_t HASH_STREAM_BUFFER_SIZE = 64 * 1024;
+
+const char *GetEvpDigestName(HashAlgorithm algorithm)
+{
+    switch (algorithm) {
+        case HashAlgorithm::SHA1:
+            return "SHA1";
+        case HashAlgorithm::SHA256:
+            return "SHA2-256";
+        case HashAlgorithm::SHA384:
+            return "SHA2-384";
+        case HashAlgorithm::SHA512:
+            return "SHA2-512";
+        case HashAlgorithm::BLAKE2:
+            return "BLAKE2B-512";
+        case HashAlgorithm::BLAKE2S_256:
+            return "BLAKE2S-256";
+        case HashAlgorithm::BLAKE3:
+            return "BLAKE3";
+        case HashAlgorithm::SM3:
+            return "SM3";
+        case HashAlgorithm::UNKNOWN:
+        default:
+            return nullptr;
+    }
+}
+}
+
 class Hash::Impl {
 public:
     explicit Impl(HashAlgorithm algorithm)
     {
-        // check algorithm is valid
-        if (algorithm == HashAlgorithm::UNKNOWN) {
+        const char *digestName = GetEvpDigestName(algorithm);
+        if (digestName == nullptr) {
             CCSEC_LOG_ERROR("Hash|END|returnF|Invalid hash algorithm");
             return;
         }
 
-        // allocate algorithm
-        switch (algorithm) {
-            case HashAlgorithm::SHA256:
-                // 获取openssl算法描述结构EVP_MD
-                hash_algo_str = "sha2-256";
-                md_ = ossl::FetchEvpMd(hash_algo_str);
-                if (md_ == nullptr) {
-                    CCSEC_LOG_ERROR("Hash|END|returnF|unsupported hash algorithm");
-                    return;
-                }
-                break;
-            default:
-                CCSEC_LOG_ERROR("Hash|END|returnF|unsupported hash algorithm");
+        md_ = ossl::FetchEvpMd(digestName);
+        if (md_ == nullptr) {
+#ifdef CDF_ENABLE_BLAKE3
+            if (algorithm == HashAlgorithm::BLAKE3) {
+                blake3Hasher_ = std::make_unique<blake3_hasher>();
+                digestSize_ = BLAKE3_OUT_LEN;
+                inited_ = true;
+                blake3_hasher_init(blake3Hasher_.get());
                 return;
+            }
+#endif
+            CCSEC_LOG_ERROR("Hash|END|returnF|unsupported hash algorithm");
+            return;
         }
         // 创建hash上下文
         context_ = ossl::UniqueMdCtx(EVP_MD_CTX_new());
@@ -84,13 +116,14 @@ public:
             CCSEC_LOG_ERROR("Reset|END|returnF|Hash is not inited");
             return false;
         }
-        EVP_MD_CTX_reset(context_.get());
-        ossl::UniqueMd md = ossl::FetchEvpMd(hash_algo_str);
-        if (md == nullptr) {
-            CCSEC_LOG_ERROR("Reset|END|returnF|EVP_MD_fetch false");
-            return false;
+#ifdef CDF_ENABLE_BLAKE3
+        if (blake3Hasher_ != nullptr) {
+            blake3_hasher_reset(blake3Hasher_.get());
+            return true;
         }
-        auto res = EVP_DigestInit_ex(context_.get(), md.get(), nullptr);
+#endif
+        EVP_MD_CTX_reset(context_.get());
+        auto res = EVP_DigestInit_ex(context_.get(), md_.get(), nullptr);
         if (res != OpenSSLRC::OK) { // 返回失败
             CCSEC_LOG_ERROR("Reset|END|returnF|EVP_DigestInit_ex false");
             return false;
@@ -109,32 +142,18 @@ public:
             CCSEC_LOG_ERROR("Update|END|returnF|invalid param, input is empty");
             return false;
         }
-        if (input.length() > 0xffffffff) {
-            CCSEC_LOG_ERROR("Update|END|returnF|invalid param, input is too long");
-            return false;
+#ifdef CDF_ENABLE_BLAKE3
+        if (blake3Hasher_ != nullptr) {
+            blake3_hasher_update(blake3Hasher_.get(), input.data(), input.length());
+            return true;
         }
-        uint8_t *data = new (std::nothrow) uint8_t[input.length()];
-        if (data == nullptr) {
-            CCSEC_LOG_ERROR("Update|END|returnF|Failed to allocate memory");
-            return false;
-        }
-        int32_t ret = memcpy_s(data, input.length(), input.data(), input.length());
-        if (ret != 0) {
-            CCSEC_LOG_ERROR("Update|END|returnF|Failed to memcpy_s");
-            delete[] data;
-            data = nullptr;
-            return false;
-        }
+#endif
         // 输入待计算数据，该接口在init后final前可以调用多次。
-        ret = EVP_DigestUpdate(context_.get(), data, input.length());
+        const int32_t ret = EVP_DigestUpdate(context_.get(), input.data(), input.length());
         if (ret != OpenSSLRC::OK) {
             CCSEC_LOG_ERROR("Update|END|returnF|Failed to EVP_DigestUpdate, error code:" << ret);
-            delete[] data;
-            data = nullptr;
             return false;
         }
-        delete[] data;
-        data = nullptr;
         return true;
     }
 
@@ -145,6 +164,14 @@ public:
             return false;
         }
 
+#ifdef CDF_ENABLE_BLAKE3
+        if (blake3Hasher_ != nullptr) {
+            std::array<uint8_t, BLAKE3_OUT_LEN> digest{};
+            blake3_hasher_finalize(blake3Hasher_.get(), digest.data(), digest.size());
+            output.insert(output.end(), digest.begin(), digest.end());
+            return true;
+        }
+#endif
         uint8_t *outputArray = (uint8_t *)malloc(digestSize_); // 输出buffer，由用户负责管理
         if (outputArray == nullptr) {
             CCSEC_LOG_ERROR("Finalize|END|returnF|Failed to malloc");
@@ -170,9 +197,11 @@ private:
     uint32_t digestSize_ = 0; // 算法摘要长度
     bool inited_ = false; // 是否初始化成功
 
-    std::string hash_algo_str;
     ossl::UniqueMd md_;
     ossl::UniqueMdCtx context_; // 哈希上下文
+#ifdef CDF_ENABLE_BLAKE3
+    std::unique_ptr<blake3_hasher> blake3Hasher_;
+#endif
 };
 
 Hash::Hash(HashAlgorithm algorithm) : impl_(std::make_unique<Impl>(algorithm)) {}
@@ -197,6 +226,50 @@ bool Hash::Update(std::string_view input)
 bool Hash::Finalize(std::vector<char> &output)
 {
     return impl_->Finalize(output);
+}
+
+bool HashStream(std::istream &input, HashAlgorithm algorithm, std::vector<char> &output)
+{
+    Hash hash(algorithm);
+    if (hash.DigestSize() == 0) {
+        CCSEC_LOG_ERROR("HashStream|END|returnF|invalid hash algorithm");
+        return false;
+    }
+
+    std::array<char, HASH_STREAM_BUFFER_SIZE> buffer{};
+    bool hasInput = false;
+    while (input) {
+        input.read(buffer.data(), static_cast<std::streamsize>(buffer.size()));
+        const auto bytesRead = input.gcount();
+        if (bytesRead <= 0) {
+            continue;
+        }
+
+        hasInput = true;
+        if (!hash.Update(std::string_view(buffer.data(), static_cast<size_t>(bytesRead)))) {
+            CCSEC_LOG_ERROR("HashStream|END|returnF|Failed to update");
+            return false;
+        }
+    }
+
+    if (input.bad() || (input.fail() && !input.eof())) {
+        CCSEC_LOG_ERROR("HashStream|END|returnF|Failed to read input stream");
+        return false;
+    }
+    if (!hasInput) {
+        CCSEC_LOG_ERROR("HashStream|END|returnF|input is empty");
+        return false;
+    }
+    if (!hash.Finalize(output)) {
+        CCSEC_LOG_ERROR("HashStream|END|returnF|Failed to Finalize");
+        return false;
+    }
+    return true;
+}
+
+bool Sha256Stream(std::istream &input, std::vector<char> &output)
+{
+    return HashStream(input, HashAlgorithm::SHA256, output);
 }
 
 bool Sha256(std::string_view input, std::vector<char> &output)

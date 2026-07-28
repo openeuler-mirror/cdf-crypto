@@ -7,6 +7,7 @@ function(cdf_declare_project_options)
   option(BUILD_ASAN "Enable AddressSanitizer for CDF targets" OFF)
   option(ENABLE_DOWNLOAD_DEPENDENCY "Download missing dependencies" OFF)
   option(ENABLE_SHARED "Build the CDF shared library" ON)
+  option(ENABLE_BLAKE3 "Enable the optional built-in BLAKE3 backend" OFF)
 
   option(ENABLE_ALL_MODULES "Build all CDF modules" OFF)
   option(ENABLE_MODULE_AUTHENTICATION "Build the authentication module" OFF)

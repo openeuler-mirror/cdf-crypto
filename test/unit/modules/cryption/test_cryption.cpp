@@ -12,6 +12,7 @@
  */
 
 #include <algorithm>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -49,6 +50,17 @@ namespace {
 
 constexpr std::string_view TEST_PLAINTEXT = "1";
 
+std::vector<char> HexToBytes(std::string_view hex)
+{
+    std::vector<char> bytes;
+    bytes.reserve(hex.size() / 2);
+    for (size_t i = 0; i < hex.size(); i += 2) {
+        const std::string byteString(hex.substr(i, 2));
+        bytes.push_back(static_cast<char>(strtol(byteString.c_str(), nullptr, 16)));
+    }
+    return bytes;
+}
+
 } // namespace
 
 bool StubUpdateError([[maybe_unused]] std::string_view input)
@@ -63,6 +75,24 @@ bool StubFinalizeError([[maybe_unused]] std::vector<char> &output)
 
 EVP_MD_CTX *StubEvpMdCtxNewError()
 {
+    return nullptr;
+}
+
+const void *g_digestUpdateData = nullptr;
+size_t g_digestUpdateSize = 0;
+std::string g_requestedDigestName;
+
+int StubEvpDigestUpdate([[maybe_unused]] EVP_MD_CTX *ctx, const void *data, size_t size)
+{
+    g_digestUpdateData = data;
+    g_digestUpdateSize = size;
+    return 1;
+}
+
+EVP_MD *StubEvpMdFetch([[maybe_unused]] OSSL_LIB_CTX *ctx, const char *algorithm,
+                       [[maybe_unused]] const char *properties)
+{
+    g_requestedDigestName = algorithm == nullptr ? "" : algorithm;
     return nullptr;
 }
 
@@ -449,10 +479,11 @@ TEST_F(TestCrypto, Hash_Hash)
     EXPECT_EQ(ret, false);
     Hash hash2(HashAlgorithm::SHA512);
     ret = hash2.Update(str);
-    EXPECT_EQ(ret, false);
+    EXPECT_EQ(ret, true);
     std::vector<char> output;
     ret = hash2.Finalize(output);
-    EXPECT_EQ(ret, false);
+    EXPECT_EQ(ret, true);
+    EXPECT_EQ(output.size(), 64U);
     Hash hash3(HashAlgorithm::SHA256);
     uint32_t digestSize = 256 / 8;
     EXPECT_EQ(hash3.DigestSize(), digestSize);
@@ -474,6 +505,114 @@ TEST_F(TestCrypto, HashRejectsEmptyInputAndUnknownDigestSize)
     EXPECT_TRUE(hash.Update("second"));
     EXPECT_TRUE(hash.Finalize(output));
     EXPECT_EQ(output.size(), 32U);
+}
+
+TEST_F(TestCrypto, HashAlgorithmsMatchStandardVectors)
+{
+    struct TestCase {
+        HashAlgorithm algorithm;
+        std::string_view digest;
+    };
+    const std::vector<TestCase> testCases = {
+        {HashAlgorithm::SHA1, "a9993e364706816aba3e25717850c26c9cd0d89d"},
+        {HashAlgorithm::SHA384,
+         "cb00753f45a35e8bb5a03d699ac65007272c32ab0eded1631a8b605a43ff5bed"
+         "8086072ba1e7cc2358baeca134c825a7"},
+        {HashAlgorithm::SHA512,
+         "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a"
+         "2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f"},
+        {HashAlgorithm::BLAKE2,
+         "ba80a53f981c4d0d6a2797b69f12f6e94c212f14685ac4b74b12bb6fdbffa2d"
+         "17d87c5392aab792dc252d5de4533cc9518d38aa8dbf1925ab92386edd4009923"},
+        {HashAlgorithm::BLAKE2S_256,
+         "508c5e8c327c14e2e1a72ba34eeb452f37458b209ed63a294d999b4c86675982"},
+        {HashAlgorithm::SM3, "66c7f0f462eeedd9d1f2d46bdc10e4e24167c4875cf2f7a2297da02b8f4ba8e0"},
+    };
+
+    for (const auto &testCase : testCases) {
+        Hash hash(testCase.algorithm);
+        std::vector<char> output;
+        EXPECT_TRUE(hash.Update("abc"));
+        EXPECT_TRUE(hash.Finalize(output));
+        EXPECT_EQ(output, HexToBytes(testCase.digest));
+    }
+}
+
+TEST_F(TestCrypto, HashAlgorithmBlake2Alias)
+{
+    EXPECT_EQ(HashAlgorithm::BLAKE2B_512, HashAlgorithm::BLAKE2);
+}
+
+TEST_F(TestCrypto, Blake3BackendSelection)
+{
+    g_requestedDigestName.clear();
+
+    Stub stub;
+    stub.Set(EVP_MD_fetch, StubEvpMdFetch);
+    Hash hash(HashAlgorithm::BLAKE3);
+
+    EXPECT_EQ(g_requestedDigestName, "BLAKE3");
+#ifdef CDF_ENABLE_BLAKE3
+    EXPECT_EQ(hash.DigestSize(), 32U);
+    EXPECT_TRUE(hash.Update("a"));
+    EXPECT_TRUE(hash.Update("bc"));
+    std::vector<char> output;
+    EXPECT_TRUE(hash.Finalize(output));
+    EXPECT_EQ(output, HexToBytes("6437b3ac38465133ffb63b75273a8db5"
+                                 "48c558465d79db03fd359c6cd5bd9d85"));
+
+    EXPECT_TRUE(hash.Reset());
+    output.clear();
+    EXPECT_TRUE(hash.Update("abc"));
+    EXPECT_TRUE(hash.Finalize(output));
+    EXPECT_EQ(output, HexToBytes("6437b3ac38465133ffb63b75273a8db5"
+                                 "48c558465d79db03fd359c6cd5bd9d85"));
+#else
+    EXPECT_EQ(hash.DigestSize(), 0U);
+#endif
+    stub.Reset(EVP_MD_fetch);
+}
+
+TEST_F(TestCrypto, HashUpdatePassesBinaryInputBufferDirectlyToOpenSsl)
+{
+    const std::string input("ab\0cd", 5);
+    g_digestUpdateData = nullptr;
+    g_digestUpdateSize = 0;
+
+    Stub stub;
+    stub.Set(EVP_DigestUpdate, StubEvpDigestUpdate);
+    Hash hash(HashAlgorithm::SHA256);
+
+    EXPECT_TRUE(hash.Update(std::string_view(input.data(), input.size())));
+    EXPECT_EQ(g_digestUpdateData, input.data());
+    EXPECT_EQ(g_digestUpdateSize, input.size());
+    stub.Reset(EVP_DigestUpdate);
+}
+
+TEST_F(TestCrypto, HashStreamMatchesOneShotDigestAcrossMultipleChunks)
+{
+    std::string input(1024 * 1024, 'a');
+    std::istringstream stream(input);
+    std::vector<char> streamOutput;
+    std::vector<char> oneShotOutput;
+
+    EXPECT_TRUE(Sha256Stream(stream, streamOutput));
+    EXPECT_TRUE(Sha256(input, oneShotOutput));
+    EXPECT_EQ(streamOutput, oneShotOutput);
+}
+
+TEST_F(TestCrypto, HashStreamRejectsInvalidInputs)
+{
+    std::istringstream emptyStream;
+    std::vector<char> output;
+    EXPECT_FALSE(Sha256Stream(emptyStream, output));
+
+    std::istringstream unsupportedStream("data");
+    EXPECT_FALSE(HashStream(unsupportedStream, static_cast<HashAlgorithm>(UINT32_MAX), output));
+
+    std::istringstream failedStream("data");
+    failedStream.setstate(std::ios::badbit);
+    EXPECT_FALSE(HashStream(failedStream, HashAlgorithm::SHA256, output));
 }
 
 TEST_F(TestCrypto, NativeHmacRejectsInvalidInputs)

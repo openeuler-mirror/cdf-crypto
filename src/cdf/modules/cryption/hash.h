@@ -14,6 +14,7 @@
 #pragma once
 
 #include <cstddef>
+#include <istream>
 #include <string>
 #include <utility>
 #include <cstdint>
@@ -24,12 +25,16 @@
 
 namespace cdf {
 enum class HashAlgorithm : uint32_t {
-    UNKNOWN, // invalid case
+    UNKNOWN,
+    SHA1,
     SHA256,
-    SHA512, // unsupported
-    BLAKE2, // unsupported
-    BLAKE3, // unsupported
-    SM3,    // unsupported
+    SHA384,
+    SHA512,
+    BLAKE2,
+    BLAKE2B_512 = BLAKE2,
+    BLAKE2S_256,
+    BLAKE3,
+    SM3,
 };
 
 // Hash Implementation Class
@@ -60,5 +65,7 @@ private:
 
 /// Function alias
 
+bool HashStream(std::istream &input, HashAlgorithm algorithm, std::vector<char> &output);
+bool Sha256Stream(std::istream &input, std::vector<char> &output);
 bool Sha256(std::string_view input, std::vector<char> &output);
 } // namespace cdf

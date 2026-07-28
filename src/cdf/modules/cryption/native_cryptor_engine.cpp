@@ -129,7 +129,6 @@ int32_t CryptoEngine::Encrypt(const uint8_t *cryptoKey, const uint32_t cryptoKey
     return OpensslEncrypt(cryptoKey, cryptoKeyLen, plainText, plainTextLen, cipherText, cipherTextLen);
 }
 
-// todo: 函数入参为字符串时，使用指针+长度的格式，偏离C++风格，统一整改，使用C++的风格
 int32_t CryptoEngine::OpensslCcmEncrypt(const uint8_t *cryptoKey, [[maybe_unused]]const uint32_t cryptoKeyLen,
                                         const uint8_t *plainText, const uint32_t plainTextLen, uint8_t *cipherText,
                                         uint32_t *cipherTextLen)

@@ -69,6 +69,9 @@ if(ENABLE_MODULE_CRYPTION OR ENABLE_ALL_MODULES)
     cdf_add_unit_test(cdf_ut_cryption SOURCES
         unit/modules/cryption/test_cryption.cpp
     )
+    if(ENABLE_BLAKE3)
+        target_compile_definitions(cdf_ut_cryption PRIVATE CDF_ENABLE_BLAKE3)
+    endif()
 endif()
 
 if(ENABLE_MODULE_KEY_MANAGEMENT OR ENABLE_ALL_MODULES)

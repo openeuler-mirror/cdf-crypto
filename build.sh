@@ -30,6 +30,7 @@ JOBS=
 INSTALL_PREFIX=
 PREFIX_SET=OFF
 ENABLE_SHARED=ON
+ENABLE_BLAKE3=OFF
 
 BUILD_TEST=OFF
 BUILD_COVERAGE=OFF
@@ -73,6 +74,7 @@ Options:
   --profile <name>      debug, release, or asan (default: release)
   --modules <a,b,...>   Build selected modules and required dependencies
   --fetch-deps          Allow automatic dependency downloads
+  --enable-blake3       Enable the optional built-in BLAKE3 backend
   --with-tests          Build test binaries without running them (build only)
   --jobs <n>            Parallel build jobs (default: detected CPU count)
   --prefix <path>       Install staging prefix (install only; default: output/cdf)
@@ -182,6 +184,10 @@ parse_args() {
                 FETCH_DEPS=ON
                 shift
                 ;;
+            --enable-blake3)
+                ENABLE_BLAKE3=ON
+                shift
+                ;;
             --with-tests)
                 WITH_TESTS=ON
                 WITH_TESTS_SET=ON
@@ -237,6 +243,7 @@ validate_options() {
         [[ "${PROFILE_SET}" == "OFF" ]] || die "${COMMAND} does not accept --profile"
         [[ "${MODULES}" == "ALL" ]] || die "${COMMAND} does not accept --modules"
         [[ "${FETCH_DEPS}" == "OFF" ]] || die "${COMMAND} does not accept --fetch-deps"
+        [[ "${ENABLE_BLAKE3}" == "OFF" ]] || die "${COMMAND} does not accept --enable-blake3"
         [[ -z "${JOBS}" ]] || die "${COMMAND} does not accept --jobs"
         [[ "${ENABLE_SHARED}" == "ON" ]] || die "${COMMAND} does not accept --no-shared"
     fi
@@ -343,6 +350,7 @@ Build directory    : ${BUILD_DIR}
 Install prefix     : ${INSTALL_PREFIX}
 Modules            : ${MODULES}
 Download dependency: ${FETCH_DEPS}
+Enable BLAKE3      : ${ENABLE_BLAKE3}
 Build tests        : ${BUILD_TEST}
 Build shared       : ${ENABLE_SHARED}
 Parallel jobs      : ${JOBS}
@@ -380,6 +388,7 @@ configure_project() {
         -DBUILD_FUZZ="${BUILD_FUZZ}" \
         -DENABLE_SHARED="${ENABLE_SHARED}" \
         -DENABLE_DOWNLOAD_DEPENDENCY="${FETCH_DEPS}" \
+        -DENABLE_BLAKE3="${ENABLE_BLAKE3}" \
         -DENABLE_ALL_MODULES=OFF \
         -DENABLE_MODULE_AUTHENTICATION=OFF \
         -DENABLE_MODULE_AUTHORIZATION=OFF \
