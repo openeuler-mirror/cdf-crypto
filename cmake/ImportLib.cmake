@@ -1,5 +1,3 @@
-# Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
-
 macro(import_static_lib_from LIBNAME LIB)
   add_library(${LIBNAME} STATIC IMPORTED)
   set_target_properties(

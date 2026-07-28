@@ -1,5 +1,3 @@
-# Copyright (C) 2024 by huawei.com
-
 if(NOT ENABLE_DOWNLOAD_DEPENDENCY)
   # Use system-installed krb5 from RPM
   add_library(libkrb5 INTERFACE)

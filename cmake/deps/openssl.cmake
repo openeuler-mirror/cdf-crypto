@@ -1,5 +1,3 @@
-# Copyright (C) 2024 by huawei
-
 if(ENABLE_DOWNLOAD_DEPENDENCY)
   set(DOWNLOAD_ARGS
       GIT_REPOSITORY

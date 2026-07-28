@@ -1,6 +1,3 @@
-#
-# Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
-#
 
 # To format cmake files we use cmake-format,
 # docs: https://github.com/cheshirekow/cmake_format:

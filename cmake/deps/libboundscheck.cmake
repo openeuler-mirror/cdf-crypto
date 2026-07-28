@@ -1,5 +1,3 @@
-# Copyright (C) 2024 by huawei.com
-
 if(NOT ENABLE_DOWNLOAD_DEPENDENCY)
     # Use system-installed libboundscheck from RPM
     add_library(libboundscheck-itf INTERFACE)
