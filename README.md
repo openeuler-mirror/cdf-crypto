@@ -22,6 +22,9 @@ CDF的全称是Confidential Data defensive Framework，提供敏感数据保护�
   工作树，也可以通过 `--fetch-deps` 下载 OpenSSL 3.0.9。
 + 当前已验证 OpenSSL 3.0.9、3.1.8、3.3.7、3.5.7 和 4.0.1 下
   Rand/Cryption 构建与测试通过。
++ 内置 BLAKE3 后端默认关闭。使用 `--enable-blake3` 显式启用；离线
+  构建需要 `external/blake3`，也可同时使用 `--fetch-deps` 下载
+  BLAKE3 1.8.5。
 + 测试环境可按实际发行版安装同名或等价软件包；以下以 yum 系包名为例。
 
 基础编译工具，适用于 `build`、`test`、`coverage`、`install` 和 `package rpm`：
@@ -107,6 +110,12 @@ Lines 70%、Branches 50%，仅用于质量跟踪，不作为持续集成硬门�
 
 ```
 bash build.sh build --profile debug --modules rand,authorization
+```
+
++ 显式启用 BLAKE3 内置后端并下载依赖
+
+```
+bash build.sh build --modules cryption --enable-blake3 --fetch-deps
 ```
 
 + `config.sh` 是简化入口，等价于执行 `bash build.sh build`，其后参数会原样传递：

@@ -22,6 +22,8 @@ ExternalProject_Add(
   ${DOWNLOAD_ARGS}
   GIT_SUBMODULES "" # HACK
   PREFIX ${DEPENDENCY_INSTALL_PREFIX_NAME}
+  BINARY_DIR
+    ${CMAKE_DEPENDENCY_INSTALL_PREFIX}/src/openssl-build-${ENABLE_DOWNLOAD_DEPENDENCY}
   CONFIGURE_COMMAND
     <SOURCE_DIR>/Configure no-legacy no-weak-ssl-ciphers no-tests
     no-ui-console no-shared
