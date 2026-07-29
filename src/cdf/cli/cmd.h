@@ -33,16 +33,6 @@ public:
     virtual CryptionToolRc HandleCmd(std::vector<std::string> &cmdParams, const CliConfig &config) = 0;
 };
 
-class EncryptCmd : public Cmd {
-public:
-    /* *
-     * @brief handle the command
-     * @param cmdParams param of command
-     * @return the result @CryptionToolRc
-     */
-    CryptionToolRc HandleCmd(std::vector<std::string> &cmdParams, const CliConfig &config) override;
-};
-
 class CmdManager {
 public:
     /* *

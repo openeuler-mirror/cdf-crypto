@@ -34,6 +34,9 @@ sudo yum install -y krb5-libs
 sudo yum install -y libasan
 ```
 + Use `--fetch-deps` to explicitly permit automatic dependency downloads
++ The built-in BLAKE3 backend is disabled by default. Enable it explicitly with
+  `--enable-blake3`; provide `external/blake3` for offline builds or combine it
+  with `--fetch-deps` to download BLAKE3 1.8.5.
 2. Build Instructions
 + Default build (Release, all modules, offline dependencies)
 ```
@@ -57,6 +60,11 @@ used for quality tracking and are not enforced as CI failure thresholds.
 
 ```
 bash build.sh build --profile debug --modules rand,authorization
+```
++ Enable the built-in BLAKE3 backend and download its source
+
+```
+bash build.sh build --modules cryption --enable-blake3 --fetch-deps
 ```
 + `config.sh` is a convenience entry point. It delegates to
   `bash build.sh build` and forwards all following options unchanged:

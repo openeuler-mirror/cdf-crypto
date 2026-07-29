@@ -14,6 +14,8 @@
 - libboundscheck、RapidJSON 和 Kerberos 使用系统开发包，或者通过
   `--fetch-deps` 下载；
 - 测试需要 `external/gtest` 源码，或者使用 `--fetch-deps` 下载 GTest；
+- 可选的 BLAKE3 内置后端默认关闭。启用 `--enable-blake3` 时，离线构建
+  需要 `external/blake3`，或者使用 `--fetch-deps` 下载 BLAKE3 1.8.5；
 - Coverage 仅支持 GCC，需要与 GCC 版本匹配的 GNU gcov，以及 lcov 包提供的
   lcov 和 genhtml；
 - RPM 打包需要 CPack 和 rpmbuild。
@@ -31,6 +33,12 @@ bash build.sh
 
 ```bash
 bash build.sh build --fetch-deps
+```
+
+显式启用 BLAKE3 内置后端并允许下载其源码：
+
+```bash
+bash build.sh build --modules cryption --enable-blake3 --fetch-deps
 ```
 
 运行测试、生成覆盖率报告、安装和打包：
@@ -67,6 +75,7 @@ bash build.sh package rpm --fetch-deps
 | `--profile <debug\|release\|asan>` | 选择构建类型和插桩。 | `release` |
 | `--modules <a,b,...>` | 构建指定模块及传递依赖。 | 全部模块 |
 | `--fetch-deps` | 允许自动下载缺失依赖。 | 禁止下载 |
+| `--enable-blake3` | 启用可选的 BLAKE3 内置后端。 | 关闭 |
 | `--with-tests` | 构建测试程序但不运行。 | 关闭 |
 | `--jobs <n>` | 设置正整数并行任务数。 | CPU 数量 |
 | `--prefix <path>` | 设置安装暂存目录。 | `output/cdf` |
@@ -77,6 +86,7 @@ bash build.sh package rpm --fetch-deps
 | `--profile` | 是 | 是 | 否 | 是 | 否 | 否 |
 | `--modules` | 是 | 是 | 是 | 是 | 是 | 是 |
 | `--fetch-deps` | 是 | 是 | 是 | 是 | 是 | 是 |
+| `--enable-blake3` | 是 | 是 | 是 | 是 | 是 | 是 |
 | `--with-tests` | 是 | 否 | 否 | 否 | 否 | 否 |
 | `--jobs` | 是 | 是 | 是 | 是 | 是 | 是 |
 | `--prefix` | 否 | 否 | 否 | 是 | 否 | 否 |
@@ -225,8 +235,9 @@ ctest --test-dir build/debug -L '^cdf_ut_cli$' --output-on-failure
 bash build.sh build
 ```
 
-离线测试使用 `external/gtest`，Rand/Cryption 使用 `external/openssl`。其中
-OpenSSL 源码需要保留为 Git 工作树。构建会从其 `HEAD` 导出干净快照到
+离线测试使用 `external/gtest`，Rand/Cryption 使用 `external/openssl`。启用
+`--enable-blake3` 时还需要 `external/blake3`。其中 OpenSSL 源码需要保留为
+Git 工作树。构建会从其 `HEAD` 导出干净快照到
 `build/<profile>/deps/src/` 后进行 out-of-source 编译，不会在
 `external/openssl` 中生成或复用构建残留，因此不同 Profile 可以并行构建。
 
@@ -251,6 +262,9 @@ OpenSSL 3.0.9 下构建与测试通过；更高版本基于 OpenSSL 3 Provider/E
 ```bash
 bash build.sh build --fetch-deps
 ```
+
+`--fetch-deps` 不会自动启用 BLAKE3；需要 BLAKE3 时必须同时传入
+`--enable-blake3`。
 
 下载和编译结果位于对应 Profile 的 `build/<profile>/deps/`。第三方项目不继承
 CDF 的 `-Werror`、Coverage、ASan 或安全加固参数。
@@ -356,7 +370,8 @@ cmake -S . -B build/custom \
 
 - `Unknown command`：使用了旧命令或拼写错误，运行 `bash build.sh help`；
 - `Unknown module`：模块不在支持列表中；
-- 依赖源码不存在：准备 `external/`，或者增加 `--fetch-deps`；
+- 依赖源码不存在：准备 `external/`，或者增加 `--fetch-deps`；启用
+  BLAKE3 时需要 `external/blake3` 或同时使用 `--fetch-deps`；
 - Coverage 工具缺失：使用 GCC，并安装与 GCC 版本匹配的 GNU gcov，以及 lcov
   包提供的 lcov 和 genhtml；
 - 参数不适用于命令：根据“参数及适用范围”调整命令。

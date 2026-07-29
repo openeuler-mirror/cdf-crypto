@@ -13,6 +13,9 @@
   `--fetch-deps` to download them;
 - the GTest sources under `external/gtest` for offline tests, or
   `--fetch-deps` to download GTest;
+- the optional built-in BLAKE3 backend is disabled by default. When
+  `--enable-blake3` is used, offline builds require `external/blake3`, or use
+  `--fetch-deps` to download BLAKE3 1.8.5;
 - Coverage supports GCC only and requires GNU gcov matching the GCC version,
   plus lcov and genhtml from the lcov package;
 - CPack and rpmbuild for RPM packaging.
@@ -30,6 +33,12 @@ Allow dependency downloads explicitly:
 
 ```bash
 bash build.sh build --fetch-deps
+```
+
+Enable the built-in BLAKE3 backend and permit downloading its source:
+
+```bash
+bash build.sh build --modules cryption --enable-blake3 --fetch-deps
 ```
 
 Common actions:
@@ -67,6 +76,7 @@ callbacks, which a real fuzzing engine can replace with strong definitions.
 | `--profile <debug\|release\|asan>` | Select build type and instrumentation. | `release` |
 | `--modules <a,b,...>` | Build selected modules and transitive dependencies. | all modules |
 | `--fetch-deps` | Permit automatic dependency downloads. | disabled |
+| `--enable-blake3` | Enable the optional built-in BLAKE3 backend. | disabled |
 | `--with-tests` | Build test binaries without running them. | disabled |
 | `--jobs <n>` | Set a positive parallel job count. | CPU count |
 | `--prefix <path>` | Set the install staging prefix. | `output/cdf` |
@@ -77,6 +87,7 @@ callbacks, which a real fuzzing engine can replace with strong definitions.
 | `--profile` | yes | yes | no | yes | no | no |
 | `--modules` | yes | yes | yes | yes | yes | yes |
 | `--fetch-deps` | yes | yes | yes | yes | yes | yes |
+| `--enable-blake3` | yes | yes | yes | yes | yes | yes |
 | `--with-tests` | yes | no | no | no | no | no |
 | `--jobs` | yes | yes | yes | yes | yes | yes |
 | `--prefix` | no | no | no | yes | no | no |
@@ -238,14 +249,18 @@ downloads. Downloaded dependency builds are stored under
 `build/<profile>/deps/`.
 
 Offline tests use `external/gtest`, while Rand and Cryption use
-`external/openssl`. The offline OpenSSL source must remain a Git worktree.
-Each profile exports a clean snapshot from its `HEAD` into
+`external/openssl`. Builds with `--enable-blake3` additionally require
+`external/blake3`. The offline OpenSSL source must remain a Git worktree. Each
+profile exports a clean snapshot from its `HEAD` into
 `build/<profile>/deps/src/` and builds it out of source. Builds therefore do
 not create or reuse artifacts in `external/openssl`, and different profiles
 can run concurrently.
 
 Third-party projects do not inherit CDF `-Werror`, Coverage, ASan, or hardening
 flags, and their headers are treated as system includes.
+
+`--fetch-deps` does not enable BLAKE3 by itself. Pass `--enable-blake3`
+explicitly when the built-in backend is required.
 
 ## Artifact Locations
 
@@ -350,7 +365,8 @@ tests or downloads dependencies by default.
 
 - `Unknown command`: an old command or typo was used; run `bash build.sh help`;
 - `Unknown module`: the name is not in the supported module list;
-- missing dependency source: prepare `external/` or add `--fetch-deps`;
+- missing dependency source: prepare `external/` or add `--fetch-deps`; BLAKE3
+  builds require `external/blake3` or `--fetch-deps`;
 - missing Coverage tool: use GCC and install GNU gcov matching the GCC version,
   plus lcov and genhtml from the lcov package;
 - unsupported option: consult the applicability table above.

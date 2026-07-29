@@ -84,6 +84,7 @@ PATH="${TEST_ROOT}/fake-bin:${PATH}" \
         --profile debug \
         --modules rand,authorization \
         --fetch-deps \
+        --enable-blake3 \
         --with-tests \
         --jobs 3 \
         --no-shared >/dev/null
@@ -99,6 +100,8 @@ fake_calls=$(<"${fake_cmake_log}")
     fail "--no-shared was not forwarded"
 [[ "${fake_calls}" == *"-DENABLE_DOWNLOAD_DEPENDENCY=ON"* ]] ||
     fail "--fetch-deps was not forwarded"
+[[ "${fake_calls}" == *"-DENABLE_BLAKE3=ON"* ]] ||
+    fail "--enable-blake3 was not forwarded"
 [[ "${fake_calls}" == *"-DENABLE_MODULES=rand;authorization"* ]] ||
     fail "module list was not forwarded as a CMake list"
 [[ "${fake_calls}" == *"--parallel 3"* ]] ||
