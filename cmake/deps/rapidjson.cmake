@@ -16,7 +16,8 @@ else()
           GIT_SHALLOW On
           PREFIX ${DEPENDENCY_INSTALL_PREFIX_NAME}
           CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_DEPENDENCY_INSTALL_PREFIX}
-          -DCMAKE_SKIP_RPATH=True)
+          -DCMAKE_SKIP_RPATH=True
+          -DCMAKE_POLICY_VERSION_MINIMUM=3.5)
 
   add_library(librapidjson INTERFACE)
   target_include_directories(librapidjson SYSTEM INTERFACE
