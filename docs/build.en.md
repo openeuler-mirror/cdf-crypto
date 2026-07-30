@@ -51,6 +51,18 @@ bash build.sh install --fetch-deps
 bash build.sh package rpm --fetch-deps
 ```
 
+`build.sh package rpm` retains the CPack packaging path. To create an SRPM
+with pinned OpenSSL and BLAKE3 source archives plus debuginfo/debugsource,
+run:
+
+```bash
+bash scripts/rpm/buildrpm.sh
+```
+
+The script downloads and verifies the third-party source archives, then runs
+`rpmbuild -ba`. Binary RPMs and the SRPM are written to `package/rpm/` and
+`package/srpm/` respectively.
+
 ## Commands
 
 | Command | Behavior |

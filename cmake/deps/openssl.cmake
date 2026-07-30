@@ -1,5 +1,5 @@
 if(ENABLE_DOWNLOAD_DEPENDENCY)
-  set(DOWNLOAD_ARGS
+  set(OPENSSL_SOURCE_ARGS
       GIT_REPOSITORY
       https://gitcode.com/GitHub_Trending/ope/openssl.git
       GIT_TAG
@@ -8,8 +8,12 @@ if(ENABLE_DOWNLOAD_DEPENDENCY)
       Off
       GIT_SHALLOW
       On)
+elseif(OPENSSL_SOURCE_ARCHIVE)
+  set(OPENSSL_SOURCE_ARGS
+      URL "${OPENSSL_SOURCE_ARCHIVE}"
+      UPDATE_COMMAND "")
 else()
-  set(DOWNLOAD_ARGS
+  set(OPENSSL_SOURCE_ARGS
       DOWNLOAD_COMMAND
         ${CMAKE_COMMAND}
         -DSOURCE_DIR=${CMAKE_DEPENDENCY_SRCDIR}/openssl
@@ -19,7 +23,7 @@ endif()
 
 ExternalProject_Add(
   openssl
-  ${DOWNLOAD_ARGS}
+  ${OPENSSL_SOURCE_ARGS}
   GIT_SUBMODULES "" # HACK
   PREFIX ${DEPENDENCY_INSTALL_PREFIX_NAME}
   BINARY_DIR

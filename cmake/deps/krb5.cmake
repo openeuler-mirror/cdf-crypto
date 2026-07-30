@@ -1,4 +1,4 @@
-if(NOT ENABLE_DOWNLOAD_DEPENDENCY)
+if(NOT ENABLE_DOWNLOAD_DEPENDENCY AND NOT KRB5_SOURCE_ARCHIVE)
   # Use system-installed krb5 from RPM
   add_library(libkrb5 INTERFACE)
   target_include_directories(libkrb5 SYSTEM INTERFACE /usr/include)
@@ -10,10 +10,17 @@ if(NOT ENABLE_DOWNLOAD_DEPENDENCY)
     /usr/lib64/libk5crypto.so)
   add_library(Dependency::krb5 ALIAS libkrb5)
 else()
+  if(ENABLE_DOWNLOAD_DEPENDENCY)
+    set(KRB5_SOURCE_ARGS
+        URL https://kerberos.org/dist/krb5/1.22/krb5-1.22.2.tar.gz
+        DOWNLOAD_NAME krb5-1.22.2.tar.gz)
+  else()
+    set(KRB5_SOURCE_ARGS
+        URL "${KRB5_SOURCE_ARCHIVE}")
+  endif()
   ExternalProject_Add(
     krb5
-    URL https://kerberos.org/dist/krb5/1.22/krb5-1.22.2.tar.gz
-    DOWNLOAD_NAME krb5-1.22.2.tar.gz
+    ${KRB5_SOURCE_ARGS}
     PREFIX ${DEPENDENCY_INSTALL_PREFIX_NAME}
     UPDATE_COMMAND ""
     CONFIGURE_COMMAND autoheader && autoconf && ./configure
