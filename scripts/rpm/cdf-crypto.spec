@@ -1,8 +1,3 @@
-# -*- rpm-spec -*-
-%global _enable_debug_packages 0
-%global _debugsource_packages 1
-%global _build_id_links none
-
 Name:           cdf-crypto
 Version:        1.0.0
 Release:        1
@@ -31,10 +26,6 @@ BuildRequires:  /usr/bin/perl
 %description
 cdf-crypto (Confidential Data defensive Framework) provides cryptographic
 algorithms and key security functions.
-
-# Explicitly request both debuginfo and debugsource subpackages. Disabling the
-# distro's automatic insertion above avoids duplicate subpackage definitions.
-%debug_package
 
 %prep
 %autosetup -n %{name}-%{version} -p1
