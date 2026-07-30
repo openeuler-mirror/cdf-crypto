@@ -171,6 +171,8 @@ cdf_add_build_system_test(build_copy_git_worktree
 cdf_add_build_system_test(build_native_make_tool
     test/cmake/test_native_make_tool.sh)
 set_tests_properties(build_native_make_tool PROPERTIES SKIP_RETURN_CODE 77)
+cdf_add_build_system_test(build_krb5_warning_policy
+    test/cmake/test_krb5_warning_policy.sh)
 cdf_add_build_system_test(build_module_resolver_compat
     test/cmake/test_resolve_modules_compat.sh)
 

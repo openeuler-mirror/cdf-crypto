@@ -16,6 +16,9 @@ else()
     DOWNLOAD_NAME krb5-1.22.2.tar.gz
     PREFIX ${DEPENDENCY_INSTALL_PREFIX_NAME}
     UPDATE_COMMAND ""
+    PATCH_COMMAND
+      "${CMAKE_COMMAND}" -DKRB5_ACLOCAL_FILE=<SOURCE_DIR>/src/aclocal.m4
+      -P "${PROJECT_SOURCE_DIR}/cmake/ApplyKrb5WarningPolicy.cmake"
     CONFIGURE_COMMAND autoheader && autoconf && ./configure
       LDFLAGS=-Wl,-z,now,-z,noexecstack,-z,relro,-s
       CFLAGS=-fstack-protector-strong\ -ftrapv\ -fPIC\ -D_FORTIFY_SOURCE=2\ -O2
