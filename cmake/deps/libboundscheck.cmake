@@ -1,4 +1,4 @@
-if(NOT ENABLE_DOWNLOAD_DEPENDENCY)
+if(NOT ENABLE_DOWNLOAD_DEPENDENCY AND NOT LIBBOUNDSCHECK_SOURCE_ARCHIVE)
     # Use system-installed libboundscheck from RPM
     add_library(libboundscheck-itf INTERFACE)
     target_include_directories(libboundscheck-itf SYSTEM INTERFACE /usr/include)
@@ -6,10 +6,18 @@ if(NOT ENABLE_DOWNLOAD_DEPENDENCY)
     target_link_libraries(libboundscheck-itf INTERFACE /usr/lib64/libboundscheck.so)
     add_library(Dependency::secure_c ALIAS libboundscheck-itf)
 else()
+    if(ENABLE_DOWNLOAD_DEPENDENCY)
+        set(LIBBOUNDSCHECK_SOURCE_ARGS
+                GIT_REPOSITORY https://atomgit.com/openeuler/libboundscheck.git
+                GIT_TAG master
+                GIT_SHALLOW On)
+    else()
+        set(LIBBOUNDSCHECK_SOURCE_ARGS
+                URL "${LIBBOUNDSCHECK_SOURCE_ARCHIVE}"
+                UPDATE_COMMAND "")
+    endif()
     ExternalProject_Add(libboundscheck-src
-            GIT_REPOSITORY https://atomgit.com/openeuler/libboundscheck.git
-            GIT_TAG master
-            GIT_SHALLOW On
+            ${LIBBOUNDSCHECK_SOURCE_ARGS}
             PREFIX ${DEPENDENCY_INSTALL_PREFIX_NAME}
             CONFIGURE_COMMAND ""
             BUILD_COMMAND "${CDF_NATIVE_MAKE_EXECUTABLE}"

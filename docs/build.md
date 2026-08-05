@@ -51,6 +51,16 @@ bash build.sh install --fetch-deps
 bash build.sh package rpm --fetch-deps
 ```
 
+`build.sh package rpm` 保留 CPack 打包路径。需要生成包含固定 OpenSSL、BLAKE3
+源码归档以及 debuginfo/debugsource 的 SRPM 时，使用：
+
+```bash
+bash scripts/rpm/buildrpm.sh
+```
+
+该脚本从官方地址下载并校验第三方源码，然后执行 `rpmbuild -ba`。二进制 RPM 和
+SRPM 分别输出到 `package/rpm/` 和 `package/srpm/`。
+
 ## 命令
 
 | 命令 | 功能 |

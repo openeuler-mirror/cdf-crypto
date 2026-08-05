@@ -22,6 +22,16 @@ function(cdf_declare_project_options)
       "Semicolon-separated CDF modules, or ALL for every module")
   set(DOWNLOAD_DIR "${PROJECT_SOURCE_DIR}/external" CACHE PATH
       "Pre-provisioned dependency source directory")
+  set(OPENSSL_SOURCE_ARCHIVE "" CACHE FILEPATH
+      "Pre-provisioned OpenSSL source archive")
+  set(LIBBOUNDSCHECK_SOURCE_ARCHIVE "" CACHE FILEPATH
+      "Pre-provisioned libboundscheck source archive")
+  set(RAPIDJSON_SOURCE_ARCHIVE "" CACHE FILEPATH
+      "Pre-provisioned RapidJSON source archive")
+  set(KRB5_SOURCE_ARCHIVE "" CACHE FILEPATH
+      "Pre-provisioned Kerberos source archive")
+  set(BLAKE3_SOURCE_ARCHIVE "" CACHE FILEPATH
+      "Pre-provisioned BLAKE3 source archive")
 
   if(DEFINED DOWNLOAD_DEPENDENCY)
     message(DEPRECATION
@@ -32,6 +42,23 @@ function(cdf_declare_project_options)
 endfunction()
 
 function(cdf_validate_project_options)
+  set(dependency_source_archives
+      OPENSSL_SOURCE_ARCHIVE
+      LIBBOUNDSCHECK_SOURCE_ARCHIVE
+      RAPIDJSON_SOURCE_ARCHIVE
+      KRB5_SOURCE_ARCHIVE
+      BLAKE3_SOURCE_ARCHIVE)
+  foreach(archive_variable IN LISTS dependency_source_archives)
+    if(ENABLE_DOWNLOAD_DEPENDENCY AND ${archive_variable})
+      message(FATAL_ERROR
+        "${archive_variable} cannot be used with ENABLE_DOWNLOAD_DEPENDENCY=ON")
+    endif()
+    if(${archive_variable} AND NOT EXISTS "${${archive_variable}}")
+      message(FATAL_ERROR
+        "${archive_variable} does not exist: ${${archive_variable}}")
+    endif()
+  endforeach()
+
   get_property(is_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
   if(NOT is_multi_config AND NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
